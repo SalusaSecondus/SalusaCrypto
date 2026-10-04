@@ -11,6 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.junit.jupiter.api.Test;
 
+import dev.salusa.crypto.SequenceFunction.SequenceHash;
 import dev.salusa.crypto.SequenceFunction.SequenceMac;
 
 public class SequenceFunctionTests {
@@ -61,7 +62,7 @@ public class SequenceFunctionTests {
 
     @Test
     public void smokeSha256() {
-        SequenceFunction hash = SequenceFunction.buildSha256();
+        SequenceHash hash = SequenceFunction.buildSha256();
         hash.update(null, 0, 0);
         hash.update(decodeHex("01"));
         hash.update(decodeHex("0202"));
@@ -86,4 +87,13 @@ public class SequenceFunctionTests {
         String actualString = bytesToHex(actual);
         assertEquals(actualString, expected);
     }
+
+    /*
+     Tests to write
+     - Generic error cases
+     - multiple doFinal results in same result each time
+     - Multiple customization strings with cloning
+     - Cannot (partial)update after doFinal without reset
+     - Cannot doFinal after partialUpdate     
+     */
 }

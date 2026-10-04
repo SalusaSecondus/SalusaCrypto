@@ -9,7 +9,16 @@ import java.util.Arrays;
 
 import javax.crypto.SecretKey;
 
-public class SequenceFunction implements Cloneable {
+/**
+ * Implementation of {@code SequenceHash} and {@code SequenceMac} from
+ * <a href="https://c2sp.org/sequencehash">c2sp.org/sequencehash</a>.
+ * Please see the official specification and the
+ * <a href=
+ * "https://blog.trailofbits.com/2026/10/02/sequencehash-multihashing-for-the-rest-of-us/">Trail
+ * of Bits</a>
+ * blog post to understand the properties and uses of these functions.
+ */
+public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneable {
     private static final FunctionIndicator F_SEQMAC = new FunctionIndicator(1);
     private static final FunctionIndicator F_SEQHSH = new FunctionIndicator(2);
     private static final byte[] SEQHSH_I = "SEQHSH_I".getBytes(StandardCharsets.UTF_8);
@@ -50,18 +59,38 @@ public class SequenceFunction implements Cloneable {
         }
     }
 
-    private SequenceFunction(final byte[] key, final FunctionIndicator type, byte[] s, MessageDigest h, final int blockSize) {
+    private SequenceFunction(final byte[] key, final FunctionIndicator type, byte[] s, MessageDigest h,
+            final int blockSize) {
         this.k = InternalUtils.cloneArray(key);
         this.blockSize = blockSize;
         this.f = type;
         init(h, k, s);
     }
 
-    public SequenceFunction update(byte[] data) {
+    public boolean partialInputProcessed() {
+        return currSegLength > 0;
+    }
+
+    /**
+     * Hashes {@code data} into the underlying function as the completion or entirety of
+     * an input element.
+     * 
+     * @param data
+     * @return this for chaining
+     */
+    public T update(byte[] data) {
         return update(data, 0, data.length);
     }
 
-    public SequenceFunction update(byte[] data, int offset, int length) {
+    /**
+     * Hashes {@code data} into the underlying function as the completion or entirety of
+     * an input element.
+     * 
+     * @param data
+     * @return this for chaining
+     */
+    @SuppressWarnings("unchecked")
+    public T update(byte[] data, int offset, int length) {
         assertNotInFinal();
         currSegLength += length;
         if (length > 0) {
@@ -70,40 +99,80 @@ public class SequenceFunction implements Cloneable {
         iHash.update(encodeLSBF(currSegLength));
         currSegLength = 0;
         n++;
-        return this;
+        return (T) this;
     }
 
-    public SequenceFunction update(ByteBuffer data) {
+    /**
+     * Hashes {@code data} into the underlying function as the completion or entirety of
+     * an input element.
+     * 
+     * @param data
+     * @return this for chaining
+     */
+    @SuppressWarnings("unchecked")
+    public T update(ByteBuffer data) {
         assertNotInFinal();
         currSegLength += data.remaining();
         iHash.update(data);
         iHash.update(encodeLSBF(currSegLength));
         currSegLength = 0;
         n++;
-        return this;
+        return (T) this;
     }
 
-    public SequenceFunction updatePartial(byte[] data) {
+    /**
+     * Hashes {@code data} into the underlying function as part of an input element.
+     * One of the {@code update()} methods must be called to complete the input
+     * element.
+     * 
+     * @param data
+     * @return this for chaining
+     */
+    public T updatePartial(byte[] data) {
         return updatePartial(data, 0, data.length);
     }
 
-    public SequenceFunction updatePartial(byte[] data, int offset, int length) {
+    /**
+     * Hashes {@code data} into the underlying function as part of an input element.
+     * One of the {@code update()} methods must be called to complete the input
+     * element.
+     * 
+     * @param data
+     * @return this for chaining
+     */
+    @SuppressWarnings("unchecked")
+    public T updatePartial(byte[] data, int offset, int length) {
         assertNotInFinal();
         currSegLength += length;
         if (length > 0) {
             iHash.update(data, offset, length);
         }
-        return this;
+        return (T) this;
     }
 
-    public SequenceFunction updatePartial(ByteBuffer data) {
+    /**
+     * Hashes {@code data} into the underlying function as part of an input element.
+     * One of the {@code update()} methods must be called to complete the input
+     * element.
+     * 
+     * @param data
+     * @return this for chaining
+     */
+    @SuppressWarnings("unchecked")
+    public T updatePartial(ByteBuffer data) {
         assertNotInFinal();
         currSegLength += data.remaining();
         iHash.update(data);
-        return this;
+        return (T) this;
     }
 
-    public SequenceFunction reset() {
+    /**
+     * Reset this object to the initial configuration and ready it for more input.
+     * 
+     * @return this for chaining
+     */
+    @SuppressWarnings("unchecked")
+    public T reset() {
         try {
             iHash = (MessageDigest) iBase.clone();
             n = 0;
@@ -112,10 +181,22 @@ public class SequenceFunction implements Cloneable {
         } catch (final CloneNotSupportedException ex) {
             throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
-        return this;
+        return (T) this;
     }
 
+    /**
+     * Returns the result of the calculation.
+     * <em>DOES NOT</em> reset the object and so no more data can be processed until
+     * {@link #reset()} is explicitly called.
+     * 
+     * @return
+     */
     public byte[] doFinal() {
+        if (currSegLength > 0) {
+            // Someone started hashing input but didn't complete a segment.
+            throw new IllegalStateException(
+                    "doFinal() called immediately after updatePartial(). Must call update() to finish partial input.");
+        }
         if (cachedInner == null) {
             cachedInner = iHash.digest();
             iHash = null;
@@ -140,19 +221,21 @@ public class SequenceFunction implements Cloneable {
         return doFinal();
     }
 
-    public SequenceFunction cloneWithCustomization(byte[] customization) {
-        SequenceFunction result = clone();
+    @SuppressWarnings("unchecked")
+    public T cloneWithCustomization(byte[] customization) {
+        SequenceFunction<T> result = clone();
         result.init(result.oBase, k, customization);
-        return result;
+        return (T) this;
     }
 
-    public SequenceFunction clone() {
+    @SuppressWarnings("unchecked")
+    public T clone() {
         try {
-            SequenceFunction result = (SequenceFunction) super.clone();
+            SequenceFunction<T> result = (SequenceFunction<T>) super.clone();
             result.iHash = (MessageDigest) result.iHash.clone();
 
             // No need to clone oBase and iBase as they never change
-            return result;
+            return (T) this;
         } catch (final CloneNotSupportedException ex) {
             throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
@@ -287,25 +370,28 @@ public class SequenceFunction implements Cloneable {
             throw new IllegalArgumentException("Keys to SequenceMac must use a RAW format. Not " + key.getFormat());
         }
         if (!key.getAlgorithm().equalsIgnoreCase("GENERIC") && !key.getAlgorithm().equalsIgnoreCase("SequenceMAC")) {
-            throw new IllegalArgumentException("Keys to SequenceMac must have either the algorithm \"GENERIC\" or \"SequenceMAC\". Not " + key.getAlgorithm());
+            throw new IllegalArgumentException(
+                    "Keys to SequenceMac must have either the algorithm \"GENERIC\" or \"SequenceMAC\". Not "
+                            + key.getAlgorithm());
         }
         final byte[] rawKey = key.getEncoded();
         if (rawKey == null) {
             throw new IllegalArgumentException("Keys to SequenceMac must be extractable");
         }
         if (rawKey.length < 32) {
-            throw new IllegalArgumentException("Keys to SequenceMac must be at least 32 bytes long. Not " + rawKey.length);
+            throw new IllegalArgumentException(
+                    "Keys to SequenceMac must be at least 32 bytes long. Not " + rawKey.length);
         }
         return rawKey;
     }
 
-    public static final class SequenceHash extends SequenceFunction {
+    public static final class SequenceHash extends SequenceFunction<SequenceHash> {
         private SequenceHash(byte[] s, MessageDigest h, final int blockSize) {
             super(null, F_SEQHSH, s, h, blockSize);
         }
     }
 
-    public static final class SequenceMac extends SequenceFunction {
+    public static final class SequenceMac extends SequenceFunction<SequenceMac> {
         private SequenceMac(final byte[] key, byte[] s, MessageDigest h, final int blockSize) {
             super(key, F_SEQMAC, s, h, blockSize);
         }
