@@ -1,0 +1,9 @@
+{
+    "cSpell.words": [
+        "LSBF",
+        "MSBF",
+        "SEQHSH"
+    ],
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "automatic"
+}
