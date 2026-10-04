@@ -120,6 +120,37 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         return (T) this;
     }
 
+    @SuppressWarnings("unchecked")
+    public T update(Iterable<?> input) {
+        for (final Object elem: input) {
+            if (elem instanceof ByteBuffer) {
+                update((ByteBuffer) elem);
+            } else if (elem instanceof byte[]) {
+                update((byte[]) elem);
+            } else {
+                throw new IllegalArgumentException("Iterable must only contain instances of ByteBuffer and byte[]. Not " + elem.getClass());
+            }
+        }
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T update(byte[]... input) {
+        for (final byte[] arr: input) {
+            update(arr);
+        }
+        return (T) this;
+    }
+
+
+    @SuppressWarnings("unchecked")
+    public T update(ByteBuffer... input) {
+        for (final ByteBuffer arr: input) {
+            update(arr);
+        }
+        return (T) this;
+    }
+
     /**
      * Hashes {@code data} into the underlying function as part of an input element.
      * One of the {@code update()} methods must be called to complete the input
