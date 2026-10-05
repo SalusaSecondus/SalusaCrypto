@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,8 +84,8 @@ public class SequenceFunctionTests {
     }
 
     @Test
-    public void smokeSha256() {
-        SequenceHash hash = SequenceFunction.buildSha256();
+    public void smokeSha256() throws Exception {
+        SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
         hash.update(null, 0, 0);
         hash.update(decodeHex("01"));
         hash.update(decodeHex("0202"));
@@ -94,9 +95,9 @@ public class SequenceFunctionTests {
     }
 
     @Test
-    public void smokeSha256Mac() {
+    public void smokeSha256Mac() throws GeneralSecurityException {
         SecretKeySpec key = new SecretKeySpec(decodeHex("27ece6764c77eb17e28a4031878198f37ce95207205fba8671390c8d7449dc91"), "SequenceMac");
-        SequenceMac mac = SequenceFunction.buildSha256Mac(key, decodeHex("00000000"));
+        SequenceMac mac = SequenceMac.getInstance(key, SequenceFunctionSpec.SHA256, decodeHex("00000000"));
         mac.update(decodeHex("74aee83f30db3fd88d6e31ad41710cb8d9a5dd01aad1d1"));
         mac.update(decodeHex("f1ed6e58d442903e34571544a8af4f49e86790417916f538746911edbbd34fb9"));
         mac.update(decodeHex("bd121635c5c732"));
@@ -120,6 +121,10 @@ public class SequenceFunctionTests {
         return buildKats("hash");
     }
 
+    public static List<Arguments> buildMacKats() throws Exception {
+        return buildKats("mac");
+    }
+
     private static List<Arguments> buildKats(String subdir) throws Exception {
         Gson gson = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
@@ -138,8 +143,6 @@ public class SequenceFunctionTests {
                 continue;
             }
             String content = Files.readString(file);
-            System.out.println("foo");
-            System.err.println(content);
             List<KAT> kats = gson.fromJson(content, listType);
             for (KAT k : kats) {
                 result.add(Arguments.of(k, k.toString()));
@@ -150,43 +153,93 @@ public class SequenceFunctionTests {
 
     @ParameterizedTest(name ="{index}: {1}")
     @MethodSource("buildHashKats")
-    public void testHashKats(KAT kat, String name) {
+    public void testHashKats(KAT kat, String name) throws Exception {
         assumeFalse(kat.mustFail, "MustFail not supported yet");
 
-        SequenceHash hash = null;
+        SequenceFunctionSpec spec = null;
         switch (kat.hashName) {
             case "sha1":
-                hash = SequenceFunction.buildSha1(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA1;
                 break;
             case "sha256":
-                hash = SequenceFunction.buildSha256(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA256;
                 break;
             case "sha384":
-                hash = SequenceFunction.buildSha384(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA384;
                 break;
             case "sha512":
-                hash = SequenceFunction.buildSha512(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA512;
                 break;
             case "sha3_256":
-                hash = SequenceFunction.buildSha3_256(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA3_256;
                 break;
             case "sha3_384":
-                hash = SequenceFunction.buildSha3_384(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA3_384;
                 break;
             case "sha3_512":
-                hash = SequenceFunction.buildSha3_512(kat.getCustomizer());
+                spec = SequenceFunctionSpec.SHA3_512;
                 break;
             case "blake2b":
-                hash = SequenceFunction.buildBlake2b512(kat.getCustomizer());
+                spec = SequenceFunctionSpec.BLAKE2B_512;
                 break;
             case "blake2s":
-                hash = SequenceFunction.buildBlake2s256(kat.getCustomizer());
+                spec = SequenceFunctionSpec.BLAKE2S_256;
                 break;
             default:
                 Assumptions.abort("Unsupported hash function: " + kat.hashName);
                 break;
         }
+        SequenceHash hash = SequenceHash.getInstance(spec, kat.getCustomizer());
+        // TODO: strengthen tests
+        hash.update(kat.getInputs());
+        byte[] actual = hash.doFinal();
+        assertHexEquals(actual, kat.finalOutputHex);
+    }
 
+    @ParameterizedTest(name ="{index}: {1}")
+    @MethodSource("buildMacKats")
+    public void testMacKats(KAT kat, String name) throws Exception {
+        SequenceFunctionSpec spec = null;
+        switch (kat.hashName) {
+            case "sha1":
+                spec = SequenceFunctionSpec.SHA1;
+                break;
+            case "sha256":
+                spec = SequenceFunctionSpec.SHA256;
+                break;
+            case "sha384":
+                spec = SequenceFunctionSpec.SHA384;
+                break;
+            case "sha512":
+                spec = SequenceFunctionSpec.SHA512;
+                break;
+            case "sha3_256":
+                spec = SequenceFunctionSpec.SHA3_256;
+                break;
+            case "sha3_384":
+                spec = SequenceFunctionSpec.SHA3_384;
+                break;
+            case "sha3_512":
+                spec = SequenceFunctionSpec.SHA3_512;
+                break;
+            case "blake2b":
+                spec = SequenceFunctionSpec.BLAKE2B_512;
+                break;
+            case "blake2s":
+                spec = SequenceFunctionSpec.BLAKE2S_256;
+                break;
+            default:
+                Assumptions.abort("Unsupported hash function: " + kat.hashName);
+                break;
+        }
+        SequenceMac hash;
+        if (kat.mustFail) {
+            final SequenceFunctionSpec fSpec = spec;
+            assertThrows(GeneralSecurityException.class, () -> SequenceMac.getInstance(kat.getKey(), fSpec, kat.getCustomizer()));
+            return;
+        } else {
+            hash = SequenceMac.getInstance(kat.getKey(), spec, kat.getCustomizer());
+        }
         // TODO: strengthen tests
         hash.update(kat.getInputs());
         byte[] actual = hash.doFinal();

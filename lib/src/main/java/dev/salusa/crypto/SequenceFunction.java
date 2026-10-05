@@ -3,8 +3,9 @@ package dev.salusa.crypto;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import javax.crypto.SecretKey;
@@ -24,9 +25,9 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     private static final byte[] SEQHSH_I = "SEQHSH_I".getBytes(StandardCharsets.UTF_8);
     private static final byte[] SEQHSH_O = "SEQHSH_O".getBytes(StandardCharsets.UTF_8);
 
-    private final int blockSize;
+    private final SequenceFunctionSpec spec;
     private final FunctionIndicator f;
-    private byte[] k;
+    protected byte[] k;
     private MessageDigest iBase;
     private MessageDigest oBase;
     private MessageDigest iHash;
@@ -35,133 +36,12 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     private long currSegLength;
     private byte[] cachedInner;
 
-    public static SequenceMac buildSha256Mac(SecretKey key) {
-        return buildSha256Mac(key, null);
-    }
-
-    public static SequenceMac buildSha256Mac(SecretKey key, byte[] customizationString) {
-        try {
-            return new SequenceMac(checkedGetKey(key), customizationString, MessageDigest.getInstance("SHA-256"), 64);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA-256 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildSha1() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha1(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-1"), 64);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA-1 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildSha256() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha256(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-256"), 64);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA-256 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildSha384() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha384(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-384"), 128);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA-384 doesn't exist?", ex);
-        }
-    }
-
-
-    public static SequenceHash buildSha512() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha512(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-512"), 128);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA-512 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildSha3_256() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha3_256(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA3-256"), 136);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA3-256 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildSha3_384() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha3_384(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA3-384"), 104);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA3-384 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildSha3_512() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildSha3_512(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA3-512"), 72);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("SHA3-512 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildBlake2b512() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildBlake2b512(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("BLAKE2B-512"), 128);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("BLAKE2B-512 doesn't exist?", ex);
-        }
-    }
-
-    public static SequenceHash buildBlake2s256() {
-        return buildSha256(null);
-    }
-
-    public static SequenceHash buildBlake2s256(byte[] customizationString) {
-        try {
-            return new SequenceHash(customizationString, MessageDigest.getInstance("BLAKE2S-256"), 64);
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new UnsupportedOperationException("BLAKE2S-256 doesn't exist?", ex);
-        }
-    }
-
-    private SequenceFunction(final byte[] key, final FunctionIndicator type, byte[] s, MessageDigest h,
-            final int blockSize) {
+    private SequenceFunction(final byte[] key, final FunctionIndicator type, byte[] s, SequenceFunctionSpec spec)
+            throws GeneralSecurityException {
         this.k = InternalUtils.cloneArray(key);
-        this.blockSize = blockSize;
+        this.spec = spec;
         this.f = type;
-        init(h, k, s);
+        init(s);
     }
 
     public boolean partialInputProcessed() {
@@ -169,7 +49,8 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     }
 
     /**
-     * Hashes {@code data} into the underlying function as the completion or entirety of
+     * Hashes {@code data} into the underlying function as the completion or
+     * entirety of
      * an input element.
      * 
      * @param data
@@ -180,7 +61,8 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     }
 
     /**
-     * Hashes {@code data} into the underlying function as the completion or entirety of
+     * Hashes {@code data} into the underlying function as the completion or
+     * entirety of
      * an input element.
      * 
      * @param data
@@ -200,7 +82,8 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     }
 
     /**
-     * Hashes {@code data} into the underlying function as the completion or entirety of
+     * Hashes {@code data} into the underlying function as the completion or
+     * entirety of
      * an input element.
      * 
      * @param data
@@ -219,13 +102,14 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
 
     @SuppressWarnings("unchecked")
     public T update(Iterable<?> input) {
-        for (final Object elem: input) {
+        for (final Object elem : input) {
             if (elem instanceof ByteBuffer) {
                 update((ByteBuffer) elem);
             } else if (elem instanceof byte[]) {
                 update((byte[]) elem);
             } else {
-                throw new IllegalArgumentException("Iterable must only contain instances of ByteBuffer and byte[]. Not " + elem.getClass());
+                throw new IllegalArgumentException(
+                        "Iterable must only contain instances of ByteBuffer and byte[]. Not " + elem.getClass());
             }
         }
         return (T) this;
@@ -233,16 +117,15 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
 
     @SuppressWarnings("unchecked")
     public T update(byte[]... input) {
-        for (final byte[] arr: input) {
+        for (final byte[] arr : input) {
             update(arr);
         }
         return (T) this;
     }
 
-
     @SuppressWarnings("unchecked")
     public T update(ByteBuffer... input) {
-        for (final ByteBuffer arr: input) {
+        for (final ByteBuffer arr : input) {
             update(arr);
         }
         return (T) this;
@@ -327,6 +210,9 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         }
         if (cachedInner == null) {
             cachedInner = iHash.digest();
+            if (length(k) >= spec.getBlockSize()) {
+                System.err.println("inner_hash: " + InternalUtils.bytesToHex(cachedInner));
+            }
             iHash = null;
         }
         try {
@@ -352,7 +238,11 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     @SuppressWarnings("unchecked")
     public T cloneWithCustomization(byte[] customization) {
         SequenceFunction<T> result = clone();
-        result.init(result.oBase, k, customization);
+        try {
+            result.init(customization);
+        } catch (final GeneralSecurityException ex) {
+            throw new UnexpectedException(ex);
+        }
         return (T) this;
     }
 
@@ -374,23 +264,25 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     }
 
     // Helper functions
-    private void init(MessageDigest h, byte[] k, byte[] s) {
+    private void init(byte[] s) throws GeneralSecurityException {
         try {
-            oBase = (MessageDigest) h.clone();
+            oBase = (MessageDigest) spec.getHash().clone();
             oBase.reset();
             iBase = (MessageDigest) oBase.clone();
 
-            byte[] k_i = derive(k, oBase, (byte) 0x55, blockSize);
-            byte[] k_o = derive(k, oBase, (byte) 0xaa, blockSize);
-            byte[] sPrime = derive(s, oBase, (byte) 0x00, blockSize);
+            byte[] k_i = derive(k, oBase, (byte) 0x55, spec.getBlockSize());
+            byte[] k_o = derive(k, oBase, (byte) 0xaa, spec.getBlockSize());
+            byte[] sPrime = derive(s, oBase, (byte) 0x00, spec.getBlockSize());
 
             oBase.update(k_o);
-            oBase.update(headerO(blockSize, f, length(s), length(k)));
+            oBase.update(headerO(spec.getBlockSize(), f, length(s), length(k)));
             oBase.update(sPrime);
 
             iBase.update(k_i);
-            iBase.update(headerI(blockSize, f, length(k)));
+            iBase.update(headerI(spec.getBlockSize(), f, length(k)));
             iHash = (MessageDigest) iBase.clone();
+        } catch (final GeneralSecurityException ex) {
+            throw ex;
         } catch (final CloneNotSupportedException ex) {
             throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
@@ -436,13 +328,14 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         return result.array();
     }
 
+    // Always returns a copy.
     static byte[] pad(byte[] x, int b) {
         final int len = length(x);
         if (len == 0) {
             return new byte[b];
         }
         if (len % b == 0) {
-            return x;
+            return x.clone();
         }
         final int padLen = b - (len % b);
         return Arrays.copyOf(x, len + padLen);
@@ -456,10 +349,13 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
 
     static byte[] derive(byte[] i, MessageDigest h, byte tweak, int blockSize) {
         final byte[] iPrime;
-        if (length(i) < blockSize) {
+        if (length(i) <= blockSize) {
             iPrime = pad(i, blockSize);
         } else {
             iPrime = pad(h.digest(i), blockSize);
+        }
+        if (length(i) == blockSize) {
+            System.err.println("value: " + InternalUtils.bytesToHex(iPrime));
         }
         iPrime[0] ^= tweak;
         return iPrime;
@@ -493,35 +389,55 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         }
     }
 
-    private static byte[] checkedGetKey(SecretKey key) {
+    private static byte[] checkedGetKey(SecretKey key) throws InvalidKeyException {
         if (!key.getFormat().equalsIgnoreCase("RAW")) {
-            throw new IllegalArgumentException("Keys to SequenceMac must use a RAW format. Not " + key.getFormat());
+            throw new InvalidKeyException("Keys to SequenceMac must use a RAW format. Not " + key.getFormat());
         }
         if (!key.getAlgorithm().equalsIgnoreCase("GENERIC") && !key.getAlgorithm().equalsIgnoreCase("SequenceMAC")) {
-            throw new IllegalArgumentException(
+            throw new InvalidKeyException(
                     "Keys to SequenceMac must have either the algorithm \"GENERIC\" or \"SequenceMAC\". Not "
                             + key.getAlgorithm());
         }
         final byte[] rawKey = key.getEncoded();
         if (rawKey == null) {
-            throw new IllegalArgumentException("Keys to SequenceMac must be extractable");
+            throw new InvalidKeyException("Keys to SequenceMac must be extractable");
         }
         if (rawKey.length < 32) {
-            throw new IllegalArgumentException(
+            throw new InvalidKeyException(
                     "Keys to SequenceMac must be at least 32 bytes long. Not " + rawKey.length);
         }
         return rawKey;
     }
 
     public static final class SequenceHash extends SequenceFunction<SequenceHash> {
-        private SequenceHash(byte[] s, MessageDigest h, final int blockSize) {
-            super(null, F_SEQHSH, s, h, blockSize);
+        public static SequenceHash getInstance(SequenceFunctionSpec spec) throws GeneralSecurityException {
+            return getInstance(spec, null);
+        }
+
+        public static SequenceHash getInstance(SequenceFunctionSpec spec, byte[] customizationString)
+                throws GeneralSecurityException {
+            return new SequenceHash(customizationString, spec);
+        }
+
+        private SequenceHash(byte[] s, SequenceFunctionSpec spec) throws GeneralSecurityException {
+            super(null, F_SEQHSH, s, spec);
         }
     }
 
     public static final class SequenceMac extends SequenceFunction<SequenceMac> {
-        private SequenceMac(final byte[] key, byte[] s, MessageDigest h, final int blockSize) {
-            super(key, F_SEQMAC, s, h, blockSize);
+        public static SequenceMac getInstance(SecretKey key, SequenceFunctionSpec spec)
+                throws GeneralSecurityException {
+            return getInstance(key, spec, null);
+        }
+
+        public static SequenceMac getInstance(SecretKey key, SequenceFunctionSpec spec, byte[] customizationString)
+                throws GeneralSecurityException {
+            return new SequenceMac(key, customizationString, spec);
+        }
+
+        private SequenceMac(SecretKey key, byte[] s, SequenceFunctionSpec spec) throws GeneralSecurityException {
+            super(checkedGetKey(key), F_SEQMAC, s, spec);
         }
     }
+    // TODO: Move MAC key to separate init call
 }

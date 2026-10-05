@@ -9,6 +9,7 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
+    id 'jacoco'
 }
 
 version = projectVersion
@@ -38,4 +39,8 @@ tasks.named('test') {
     environment "CCTV_KATS_PATH", "${project.rootDir}/CCTV/sequencehash"
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+jacocoTestReport {
+    dependsOn test // tests are required to run before generating the report
 }
