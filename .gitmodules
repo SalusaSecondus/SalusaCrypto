@@ -1,0 +1,3 @@
+[submodule "CCTV"]
+	path = CCTV
+	url = git@github.com:C2SP/CCTV.git

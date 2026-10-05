@@ -3,18 +3,40 @@ package dev.salusa.crypto;
 import static dev.salusa.crypto.InternalUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.Security;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.reflect.TypeToken;
 
 import dev.salusa.crypto.SequenceFunction.SequenceHash;
 import dev.salusa.crypto.SequenceFunction.SequenceMac;
 
 public class SequenceFunctionTests {
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
     @Test
     public void EncodeMSBFTests() {
         assertHexEquals(SequenceFunction.encodeMSBF(0), "00000000000000000000000000000000");
@@ -83,11 +105,132 @@ public class SequenceFunctionTests {
 
     }
     
+    // @Test 
+    // public void temp() {
+    //     // System.out.println();
+    //     fail(System.getProperties().toString());
+    // }
+
     public static void assertHexEquals(byte[] actual, String expected) {
         String actualString = bytesToHex(actual);
-        assertEquals(actualString, expected);
+        assertEquals(expected, actualString);
     }
 
+    public static List<Arguments> buildHashKats() throws Exception {
+        return buildKats("hash");
+    }
+
+    private static List<Arguments> buildKats(String subdir) throws Exception {
+        Gson gson = new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .disableJdkUnsafe()
+            .create();
+        Path katsDir;
+        if (System.getenv("CCTV_KATS_PATH") != null) {
+            katsDir = Paths.get(System.getenv("CCTV_KATS_PATH"), subdir);
+        } else {
+            katsDir = Paths.get("CCTV", "sequencehash", subdir);
+        }
+        List<Arguments> result = new ArrayList<>();
+        TypeToken<List<KAT>> listType = new TypeToken<List<KAT>>() {}; 
+        for (Path file : Files.list(katsDir).collect(Collectors.toList())) {
+            if (Files.isDirectory(file)) {
+                continue;
+            }
+            String content = Files.readString(file);
+            System.out.println("foo");
+            System.err.println(content);
+            List<KAT> kats = gson.fromJson(content, listType);
+            for (KAT k : kats) {
+                result.add(Arguments.of(k, k.toString()));
+            }
+        }
+        return result;
+    }
+
+    @ParameterizedTest(name ="{index}: {1}")
+    @MethodSource("buildHashKats")
+    public void testHashKats(KAT kat, String name) {
+        assumeFalse(kat.mustFail, "MustFail not supported yet");
+
+        SequenceHash hash = null;
+        switch (kat.hashName) {
+            case "sha1":
+                hash = SequenceFunction.buildSha1(kat.getCustomizer());
+                break;
+            case "sha256":
+                hash = SequenceFunction.buildSha256(kat.getCustomizer());
+                break;
+            case "sha384":
+                hash = SequenceFunction.buildSha384(kat.getCustomizer());
+                break;
+            case "sha512":
+                hash = SequenceFunction.buildSha512(kat.getCustomizer());
+                break;
+            case "sha3_256":
+                hash = SequenceFunction.buildSha3_256(kat.getCustomizer());
+                break;
+            case "sha3_384":
+                hash = SequenceFunction.buildSha3_384(kat.getCustomizer());
+                break;
+            case "sha3_512":
+                hash = SequenceFunction.buildSha3_512(kat.getCustomizer());
+                break;
+            case "blake2b":
+                hash = SequenceFunction.buildBlake2b512(kat.getCustomizer());
+                break;
+            case "blake2s":
+                hash = SequenceFunction.buildBlake2s256(kat.getCustomizer());
+                break;
+            default:
+                Assumptions.abort("Unsupported hash function: " + kat.hashName);
+                break;
+        }
+
+        // TODO: strengthen tests
+        hash.update(kat.getInputs());
+        byte[] actual = hash.doFinal();
+        assertHexEquals(actual, kat.finalOutputHex);
+    }
+
+    public static final class KAT {
+        public String hashName;
+        public int functionId;
+        @SerializedName("key")
+        public String keyHex;
+        @SerializedName("customizer")
+        public String customizerHex;
+        @SerializedName("inputs")
+        public List<String> inputsHex;
+        public boolean mayFail;
+        public boolean mayWarn;
+        public boolean mustFail;
+        @SerializedName("final_output")
+        public String finalOutputHex;
+        @SerializedName("inner_hash")
+        public String innerHashHex;
+        @SerializedName("inner_header")
+        public String innerHeaderHex;
+        @SerializedName("outer_header")
+        public String outerHeaderHex;
+
+        public SecretKeySpec getKey() {
+            return new SecretKeySpec(decodeHex(keyHex), "SequenceMac");
+        }
+
+        public byte[] getCustomizer() {
+            return decodeHex(customizerHex);
+        }
+
+        public List<byte[]> getInputs() {
+            return inputsHex.stream().map(InternalUtils::decodeHex).collect(Collectors.toList());
+        }
+
+        @Override 
+        public String toString() {
+            return String.format("[%s] %d (%s) -> %s", hashName, functionId, keyHex, finalOutputHex);
+        }
+    }
     /*
      Tests to write
      - Generic error cases

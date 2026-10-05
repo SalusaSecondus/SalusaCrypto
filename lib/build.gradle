@@ -21,6 +21,8 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation libs.junit.jupiter
+    testImplementation 'com.google.code.gson:gson:2+'
+    testImplementation 'org.bouncycastle:bcprov-jdk18on:1+'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -33,6 +35,7 @@ java {
 }
 
 tasks.named('test') {
+    environment "CCTV_KATS_PATH", "${project.rootDir}/CCTV/sequencehash"
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }

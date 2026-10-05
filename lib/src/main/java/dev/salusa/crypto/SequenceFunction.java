@@ -47,6 +47,18 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         }
     }
 
+    public static SequenceHash buildSha1() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildSha1(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-1"), 64);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("SHA-1 doesn't exist?", ex);
+        }
+    }
+
     public static SequenceHash buildSha256() {
         return buildSha256(null);
     }
@@ -56,6 +68,91 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
             return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-256"), 64);
         } catch (final NoSuchAlgorithmException ex) {
             throw new UnsupportedOperationException("SHA-256 doesn't exist?", ex);
+        }
+    }
+
+    public static SequenceHash buildSha384() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildSha384(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-384"), 128);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("SHA-384 doesn't exist?", ex);
+        }
+    }
+
+
+    public static SequenceHash buildSha512() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildSha512(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA-512"), 128);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("SHA-512 doesn't exist?", ex);
+        }
+    }
+
+    public static SequenceHash buildSha3_256() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildSha3_256(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA3-256"), 136);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("SHA3-256 doesn't exist?", ex);
+        }
+    }
+
+    public static SequenceHash buildSha3_384() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildSha3_384(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA3-384"), 104);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("SHA3-384 doesn't exist?", ex);
+        }
+    }
+
+    public static SequenceHash buildSha3_512() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildSha3_512(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("SHA3-512"), 72);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("SHA3-512 doesn't exist?", ex);
+        }
+    }
+
+    public static SequenceHash buildBlake2b512() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildBlake2b512(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("BLAKE2B-512"), 128);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("BLAKE2B-512 doesn't exist?", ex);
+        }
+    }
+
+    public static SequenceHash buildBlake2s256() {
+        return buildSha256(null);
+    }
+
+    public static SequenceHash buildBlake2s256(byte[] customizationString) {
+        try {
+            return new SequenceHash(customizationString, MessageDigest.getInstance("BLAKE2S-256"), 64);
+        } catch (final NoSuchAlgorithmException ex) {
+            throw new UnsupportedOperationException("BLAKE2S-256 doesn't exist?", ex);
         }
     }
 
