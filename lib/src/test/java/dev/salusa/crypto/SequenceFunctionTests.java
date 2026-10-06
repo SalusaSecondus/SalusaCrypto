@@ -69,21 +69,6 @@ public class SequenceFunctionTests {
     }
 
     @Test
-    public void EncodeTests() throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        SequenceFunction.encode("".getBytes(StandardCharsets.UTF_8), baos::write);
-        assertHexEquals(baos.toByteArray(), "00000000000000000000000000000000");
-        baos.reset();
-
-        SequenceFunction.encode("AAA".getBytes(StandardCharsets.UTF_8), baos::write);
-        assertHexEquals(baos.toByteArray(), "41414103000000000000000000000000000000");
-        baos.reset();
-
-        SequenceFunction.encode("SEQUENCEHASH".getBytes(StandardCharsets.UTF_8), baos::write);
-        assertHexEquals(baos.toByteArray(), "53455155454e4345484153480c000000000000000000000000000000");
-    }
-
-    @Test
     public void smokeSha256() throws Exception {
         SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
         hash.update(null, 0, 0);
@@ -105,12 +90,53 @@ public class SequenceFunctionTests {
         assertHexEquals(actual, "484ad123ab6f1fea03ac9ae765a38bd34128367f408eada7ff8c21b3cd8515c3");
 
     }
-    
-    // @Test 
-    // public void temp() {
-    //     // System.out.println();
-    //     fail(System.getProperties().toString());
-    // }
+
+    @Test
+    public void doFinalRepeats() throws GeneralSecurityException {
+        byte[] customizationString = "Hellow World".getBytes(StandardCharsets.UTF_8);
+        SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256, customizationString);
+
+        byte[] val1 = new byte[]{ (byte) 1, 2, 3, 4};
+        byte[] val2 = new byte[]{ (byte) 1, 2, 3, 4};
+        hash.update(val1);
+        hash.update(val2);
+        byte[] expected = hash.doFinal();
+        byte[] actual = hash.doFinal();
+        assertHexEquals(actual, expected);
+
+        // We should also be able to clone it and get the same answer
+        SequenceHash hash2 = hash.clone();
+        actual = hash2.doFinal();
+        assertHexEquals(actual, expected);
+
+        // Cloning with the same customization string doesn't change anything
+        hash2 = hash.cloneWithCustomization(customizationString);
+        actual = hash2.doFinal();
+        assertHexEquals(actual, expected);
+    }
+    @Test
+    public void partialByteArrays() throws GeneralSecurityException {
+        SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
+        byte[] val1 = new byte[]{ (byte) 1, 2, 3, 4};
+        byte[] val2 = new byte[]{ (byte) 1, 2, 3, 4};
+        hash.update(val1);
+        hash.update(val2);
+        byte[] expected = hash.doFinal();
+        hash.reset();
+        hash.updatePartial(val1, 0, 1);
+        hash.updatePartial(val1, 1, 2);
+        hash.update(val1, 3, 1);
+        hash.updatePartial(val2, 0, 2);
+        hash.update(val2, 2, 2);
+        byte[] actual = hash.doFinal();
+        assertHexEquals(actual, expected);
+    }
+
+    public static void assertHexEquals(byte[] actual, byte[] expected) {
+        String actualString = bytesToHex(actual);
+        String expectedString = bytesToHex(expected);
+        assertEquals(expectedString, actualString);
+    }
 
     public static void assertHexEquals(byte[] actual, String expected) {
         String actualString = bytesToHex(actual);

@@ -13,3 +13,10 @@ If you want your Java cryptography to be much faster in general, I strongly reco
 
 [ACCP]: https://github.com/corretto/amazon-corretto-crypto-provider/
 [BouncyCastle]: https://www.bouncycastle.org/
+
+## Utilities
+
+- Throwing interfaces.  
+  Sometimes we need the equivalent of a [Consumer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html) or [Supplier](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html) or similar but the method might throw an Exception (or error). How to do this, especially in a way that is compatible with lambdas? I define some new interfaces to make this easier and will add them as I need them (or if people request).
+  - [ThrowingConsumer](lib/src/main/java/dev/salusa/crypto/ThrowingConsumer.java)
+  - [ThrowingSupplier](lib/src/main/java/dev/salusa/crypto/ThrowingSupplier.java)

@@ -18,8 +18,10 @@ import javax.crypto.SecretKey;
  * "https://blog.trailofbits.com/2026/10/02/sequencehash-multihashing-for-the-rest-of-us/">Trail
  * of Bits</a>
  * blog post to understand the properties and uses of these functions.
+ * 
+ * @param <T> The type of the instance of this class, used for chained method calls.
  */
-public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneable {
+public abstract class SequenceFunction<T extends SequenceFunction<T>> implements Cloneable {
     private static final FunctionIndicator F_SEQMAC = new FunctionIndicator(1);
     private static final FunctionIndicator F_SEQHSH = new FunctionIndicator(2);
     private static final byte[] SEQHSH_I = "SEQHSH_I".getBytes(StandardCharsets.UTF_8);
@@ -27,7 +29,9 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
 
     private final SequenceFunctionSpec spec;
     private final FunctionIndicator f;
-    protected byte[] k;
+    private byte[] k;
+    // Inner hash initialized for this spec and key but with no actual input.
+    // We clone this into iHash for 
     private MessageDigest iBase;
     private MessageDigest oBase;
     private MessageDigest iHash;
@@ -42,8 +46,56 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         this.spec = spec;
         this.f = type;
         init(s);
+        reset();
     }
 
+    /**
+     * Constructs an instance of SequenceMac with a null customization string.
+     * <p>
+     * Identical to {@link SequenceMac#getInstance(SecretKey, SequenceFunctionSpec)}
+     */
+    public static SequenceMac getMac(SecretKey key, SequenceFunctionSpec spec) throws GeneralSecurityException {
+        return SequenceMac.getInstance(key, spec);
+    }
+
+    /**
+     * Constructs an instance of SequenceMac.
+     * <p>
+     * Identical to
+     * {@link SequenceMac#getInstance(SecretKey, SequenceFunctionSpec, byte[])}
+     */
+    public static SequenceMac getMac(SecretKey key, SequenceFunctionSpec spec, byte[] customizationString)
+            throws GeneralSecurityException {
+        return SequenceMac.getInstance(key, spec, customizationString);
+    }
+
+    /**
+     * Constructs an instance of SequenceHash with a null customization string.
+     * <p>
+     * Identical to {@link SequenceHash#getInstance(SequenceFunctionSpec)}.
+     */
+    public static SequenceHash getHash(SequenceFunctionSpec spec) throws GeneralSecurityException {
+        return SequenceHash.getInstance(spec);
+    }
+
+    /**
+     * Constructs an instance of SequenceHash.
+     * <p>
+     * Identical to {@link SequenceHash#getInstance(SequenceFunctionSpec, byte[])}.
+     */
+    public static SequenceHash getHash(SequenceFunctionSpec spec, byte[] customizationString)
+            throws GeneralSecurityException {
+        return SequenceHash.getInstance(spec, customizationString);
+    }
+
+    /**
+     * Has this object consumed partial but uncompleted input.
+     * <p>
+     * This object has had one of the {@code updatePartial()} methods called
+     * without a following call to {@code update()}. The partial object must be
+     * completed
+     * before any {@code doFinal()} method may be called.
+     */
     public boolean partialInputProcessed() {
         return currSegLength > 0;
     }
@@ -100,6 +152,15 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         return (T) this;
     }
 
+    /**
+     * Processes all items in {@code input} and calls either
+     * {@link #update(ByteBuffer)} or {@link #update(byte[])} for each as
+     * appropriate.
+     * 
+     * @throws IllegalArgumentException if any items returned by {@code input} are
+     *                                  neither {@code byte[]} nor
+     *                                  {@link ByteBuffer}
+     */
     @SuppressWarnings("unchecked")
     public T update(Iterable<?> input) {
         for (final Object elem : input) {
@@ -115,6 +176,10 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         return (T) this;
     }
 
+    /**
+     * Processes all items of {@code input}.
+     * <p>Equivalent to calling {@link #update(byte[])} in a loop over the items.
+     */
     @SuppressWarnings("unchecked")
     public T update(byte[]... input) {
         for (final byte[] arr : input) {
@@ -123,6 +188,10 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         return (T) this;
     }
 
+    /**
+     * Processes all items of {@code input}.
+     * <p>Equivalent to calling {@link #update(ByteBuffer)} in a loop over the items.
+     */
     @SuppressWarnings("unchecked")
     public T update(ByteBuffer... input) {
         for (final ByteBuffer arr : input) {
@@ -190,7 +259,7 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
             currSegLength = 0;
             cachedInner = null;
         } catch (final CloneNotSupportedException ex) {
-            throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
+            throw new UnexpectedException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
         return (T) this;
     }
@@ -210,9 +279,6 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         }
         if (cachedInner == null) {
             cachedInner = iHash.digest();
-            if (length(k) >= spec.getBlockSize()) {
-                System.err.println("inner_hash: " + InternalUtils.bytesToHex(cachedInner));
-            }
             iHash = null;
         }
         try {
@@ -221,7 +287,7 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
             oHash.update(encodeMSBF(oBase.getDigestLength()));
             return oHash.digest(cachedInner);
         } catch (final CloneNotSupportedException ex) {
-            throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
+            throw new UnexpectedException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
     }
 
@@ -250,12 +316,14 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
     public T clone() {
         try {
             SequenceFunction<T> result = (SequenceFunction<T>) super.clone();
-            result.iHash = (MessageDigest) result.iHash.clone();
+            if (result.iHash != null) {
+                result.iHash = (MessageDigest) result.iHash.clone();
+            }
 
             // No need to clone oBase and iBase as they never change
             return (T) this;
         } catch (final CloneNotSupportedException ex) {
-            throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
+            throw new UnexpectedException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
     }
 
@@ -263,14 +331,15 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         return oBase.getDigestLength();
     }
 
-    // Helper functions
-    private void init(byte[] s) throws GeneralSecurityException {
-        try {
-            oBase = (MessageDigest) spec.getHash().clone();
-            oBase.reset();
-            iBase = (MessageDigest) oBase.clone();
+    public SequenceFunctionSpec getSpec() {
+        return spec;
+    }
 
-            byte[] k_i = derive(k, oBase, (byte) 0x55, spec.getBlockSize());
+    // Helper functions
+    private void initOuter(byte[] s) throws GeneralSecurityException {
+        try {
+            oBase = spec.getHash();
+            
             byte[] k_o = derive(k, oBase, (byte) 0xaa, spec.getBlockSize());
             byte[] sPrime = derive(s, oBase, (byte) 0x00, spec.getBlockSize());
 
@@ -278,13 +347,21 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
             oBase.update(headerO(spec.getBlockSize(), f, length(s), length(k)));
             oBase.update(sPrime);
 
-            iBase.update(k_i);
-            iBase.update(headerI(spec.getBlockSize(), f, length(k)));
-            iHash = (MessageDigest) iBase.clone();
         } catch (final GeneralSecurityException ex) {
             throw ex;
-        } catch (final CloneNotSupportedException ex) {
-            throw new UnsupportedOperationException("SequenceFunction requires that MessageDigest is cloneable", ex);
+        }
+    }
+    private void init(byte[] s) throws GeneralSecurityException {
+        try {
+            initOuter(s);
+            iBase = (MessageDigest) spec.getHash();
+
+            byte[] k_i = derive(k, iBase, (byte) 0x55, spec.getBlockSize());
+
+            iBase.update(k_i);
+            iBase.update(headerI(spec.getBlockSize(), f, length(k)));
+        } catch (final GeneralSecurityException ex) {
+            throw ex;
         }
     }
 
@@ -339,12 +416,6 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
         }
         final int padLen = b - (len % b);
         return Arrays.copyOf(x, len + padLen);
-    }
-
-    static <E extends Exception> void encode(byte[] input, ThrowingConsumer<byte[], E> f) throws E {
-        long len = length(input);
-        f.accept(input);
-        f.accept(encodeLSBF(len));
     }
 
     static byte[] derive(byte[] i, MessageDigest h, byte tweak, int blockSize) {
@@ -439,5 +510,4 @@ public class SequenceFunction<T extends SequenceFunction<T>> implements Cloneabl
             super(checkedGetKey(key), F_SEQMAC, s, spec);
         }
     }
-    // TODO: Move MAC key to separate init call
 }
