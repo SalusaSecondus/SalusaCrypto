@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
+import java.security.Provider;
 import java.util.Arrays;
 
 import javax.crypto.SecretKey;
@@ -19,7 +20,20 @@ import javax.crypto.SecretKey;
  * of Bits</a>
  * blog post to understand the properties and uses of these functions.
  * 
- * @param <T> The type of the instance of this class, used for chained method calls.
+ * <p>
+ * Use the {@code getHash()} or {@code getMac()} methods to get instances.
+ * 
+ * @param <T> The type of the instance of this class, used for chained method
+ *            calls.
+ * 
+ * @see #getHash(SequenceFunctionSpec)
+ * @see #getHash(SequenceFunctionSpec, byte[])
+ * @see #getMac(SecretKey, SequenceFunctionSpec)
+ * @see #getMac(SecretKey, SequenceFunctionSpec, byte[])
+ * @see <a href="https://c2sp.org/sequencehash">c2sp.org/sequencehash</a>
+ * @see <a href=
+ *      "https://blog.trailofbits.com/2026/10/02/sequencehash-multihashing-for-the-rest-of-us/">SequenceHash:
+ *      multihashing for the rest of us</a>
  */
 public abstract class SequenceFunction<T extends SequenceFunction<T>> implements Cloneable {
     private static final FunctionIndicator F_SEQMAC = new FunctionIndicator(1);
@@ -31,7 +45,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
     private final FunctionIndicator f;
     private byte[] k;
     // Inner hash initialized for this spec and key but with no actual input.
-    // We clone this into iHash for 
+    // We clone this into iHash for
     private MessageDigest iBase;
     private MessageDigest oBase;
     private MessageDigest iHash;
@@ -122,11 +136,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
      */
     @SuppressWarnings("unchecked")
     public T update(byte[] data, int offset, int length) {
-        assertNotInFinal();
-        currSegLength += length;
-        if (length > 0) {
-            iHash.update(data, offset, length);
-        }
+        updatePartial(data, offset, length);
         iHash.update(encodeLSBF(currSegLength));
         currSegLength = 0;
         n++;
@@ -144,8 +154,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
     @SuppressWarnings("unchecked")
     public T update(ByteBuffer data) {
         assertNotInFinal();
-        currSegLength += data.remaining();
-        iHash.update(data);
+        updatePartial(data);
         iHash.update(encodeLSBF(currSegLength));
         currSegLength = 0;
         n++;
@@ -178,7 +187,8 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
 
     /**
      * Processes all items of {@code input}.
-     * <p>Equivalent to calling {@link #update(byte[])} in a loop over the items.
+     * <p>
+     * Equivalent to calling {@link #update(byte[])} in a loop over the items.
      */
     @SuppressWarnings("unchecked")
     public T update(byte[]... input) {
@@ -190,7 +200,8 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
 
     /**
      * Processes all items of {@code input}.
-     * <p>Equivalent to calling {@link #update(ByteBuffer)} in a loop over the items.
+     * <p>
+     * Equivalent to calling {@link #update(ByteBuffer)} in a loop over the items.
      */
     @SuppressWarnings("unchecked")
     public T update(ByteBuffer... input) {
@@ -291,27 +302,31 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         }
     }
 
-    public byte[] doFinal(byte[] input) {
-        update(input);
-        return doFinal();
-    }
-
-    public byte[] doFinal(ByteBuffer input) {
-        update(input);
-        return doFinal();
-    }
-
+    /**
+     * Returns a copy of this object but with a new customization string applied.
+     * <p>
+     * If called after {@link #doFinal()}, this will only do the minimum object
+     * allocation needed to calculate the new output.
+     * 
+     * @param customization the new customization string
+     * @return
+     */
     @SuppressWarnings("unchecked")
     public T cloneWithCustomization(byte[] customization) {
         SequenceFunction<T> result = clone();
         try {
-            result.init(customization);
+            result.initOuter(customization);
         } catch (final GeneralSecurityException ex) {
             throw new UnexpectedException(ex);
         }
-        return (T) this;
+        return (T) result;
     }
 
+    /**
+     * Returns a deep copy of this object.
+     * 
+     * @see java.lang.Object#clone()
+     */
     @SuppressWarnings("unchecked")
     public T clone() {
         try {
@@ -321,12 +336,15 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
             }
 
             // No need to clone oBase and iBase as they never change
-            return (T) this;
+            return (T) result;
         } catch (final CloneNotSupportedException ex) {
             throw new UnexpectedException("SequenceFunction requires that MessageDigest is cloneable", ex);
         }
     }
 
+    /**
+     * Returns the output size in bytes.
+     */
     public int getOutputLength() {
         return oBase.getDigestLength();
     }
@@ -335,11 +353,18 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         return spec;
     }
 
+    /**
+     * Returns the provider used for the underlying message digests.
+     */
+    public Provider getProvider() {
+        return oBase.getProvider();
+    }
+
     // Helper functions
     private void initOuter(byte[] s) throws GeneralSecurityException {
         try {
             oBase = spec.getHash();
-            
+
             byte[] k_o = derive(k, oBase, (byte) 0xaa, spec.getBlockSize());
             byte[] sPrime = derive(s, oBase, (byte) 0x00, spec.getBlockSize());
 
@@ -351,6 +376,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
             throw ex;
         }
     }
+
     private void init(byte[] s) throws GeneralSecurityException {
         try {
             initOuter(s);
@@ -481,10 +507,16 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
     }
 
     public static final class SequenceHash extends SequenceFunction<SequenceHash> {
+        /**
+         * @see #getHash(SequenceFunctionSpec)
+         */
         public static SequenceHash getInstance(SequenceFunctionSpec spec) throws GeneralSecurityException {
             return getInstance(spec, null);
         }
 
+        /**
+         * @see #getHash(SequenceFunctionSpec, byte[])
+         */
         public static SequenceHash getInstance(SequenceFunctionSpec spec, byte[] customizationString)
                 throws GeneralSecurityException {
             return new SequenceHash(customizationString, spec);
@@ -496,11 +528,17 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
     }
 
     public static final class SequenceMac extends SequenceFunction<SequenceMac> {
+        /**
+         * @see #getMac(SecretKey, SequenceFunctionSpec)
+         */
         public static SequenceMac getInstance(SecretKey key, SequenceFunctionSpec spec)
                 throws GeneralSecurityException {
             return getInstance(key, spec, null);
         }
 
+        /**
+         * @see #getMac(SecretKey, SequenceFunctionSpec, byte[])
+         */
         public static SequenceMac getInstance(SecretKey key, SequenceFunctionSpec spec, byte[] customizationString)
                 throws GeneralSecurityException {
             return new SequenceMac(key, customizationString, spec);

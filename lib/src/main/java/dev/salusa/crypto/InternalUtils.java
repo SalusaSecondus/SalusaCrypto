@@ -1,5 +1,12 @@
 package dev.salusa.crypto;
 
+/**
+ * DO NOT USE
+ * 
+ * <p>This class and all methods on it are intended for internal use by the SalusaCrypto package.
+ * No promises are made about these APIs or functions and they may change or be deleted even on patch version changes.
+ * Do not use this under any circumstances.
+ */
 final class InternalUtils {
     static final byte[] EMPTY_ARRAY = new byte[0];
 
