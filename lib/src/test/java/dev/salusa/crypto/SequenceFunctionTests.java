@@ -3,6 +3,8 @@ package dev.salusa.crypto;
 import static dev.salusa.crypto.InternalUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -14,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.security.Provider;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +32,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
+import com.amazon.corretto.crypto.provider.SelfTestStatus;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -43,17 +48,51 @@ public class SequenceFunctionTests {
         Security.addProvider(new BouncyCastleProvider());
     }
 
+    private static Arguments args(SequenceFunctionSpec spec) {
+        return Arguments.of(spec, spec.getHashName());
+    }
+
+    private static SequenceFunctionSpec cloneSpec(SequenceFunctionSpec tmpl, String prov) {
+        return SequenceFunctionSpec.jce(tmpl.getHashName(), prov, tmpl.getBlockSize());
+    }
+
+    private static SequenceFunctionSpec cloneSpec(SequenceFunctionSpec tmpl, Provider prov) {
+        return SequenceFunctionSpec.jce(tmpl.getHashName(), prov, tmpl.getBlockSize());
+    }
+
     public static List<Arguments> knownSpecs() {
-        return Arrays.asList(
-                Arguments.of(SequenceFunctionSpec.SHA1, SequenceFunctionSpec.SHA1.getHashName()),
-                Arguments.of(SequenceFunctionSpec.SHA256, SequenceFunctionSpec.SHA256.getHashName()),
-                Arguments.of(SequenceFunctionSpec.SHA384, SequenceFunctionSpec.SHA384.getHashName()),
-                Arguments.of(SequenceFunctionSpec.SHA512, SequenceFunctionSpec.SHA512.getHashName()),
-                Arguments.of(SequenceFunctionSpec.SHA3_256, SequenceFunctionSpec.SHA3_256.getHashName()),
-                Arguments.of(SequenceFunctionSpec.SHA3_384, SequenceFunctionSpec.SHA3_384.getHashName()),
-                Arguments.of(SequenceFunctionSpec.SHA3_512, SequenceFunctionSpec.SHA3_512.getHashName()),
-                Arguments.of(SequenceFunctionSpec.BLAKE2B_512, SequenceFunctionSpec.BLAKE2B_512.getHashName()),
-                Arguments.of(SequenceFunctionSpec.BLAKE2S_256, SequenceFunctionSpec.BLAKE2S_256.getHashName()));
+        List<Arguments> result = new ArrayList<>();
+        result.addAll(Arrays.asList(
+                args(SequenceFunctionSpec.SHA1),
+                args(SequenceFunctionSpec.SHA1),
+                args(SequenceFunctionSpec.SHA256),
+                args(SequenceFunctionSpec.SHA384),
+                args(SequenceFunctionSpec.SHA512),
+                args(SequenceFunctionSpec.SHA3_256),
+                args(SequenceFunctionSpec.SHA3_384),
+                args(SequenceFunctionSpec.SHA3_512),
+                args(SequenceFunctionSpec.BLAKE2B_512),
+                args(SequenceFunctionSpec.BLAKE2S_256),
+                // Explicit providers for some of them
+                args(cloneSpec(SequenceFunctionSpec.SHA1, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA1, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA256, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA384, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA512, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA3_256, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA3_384, "BC")),
+                args(cloneSpec(SequenceFunctionSpec.SHA3_512, "BC"))
+            ));
+        if (AmazonCorrettoCryptoProvider.INSTANCE.runSelfTests().equals(SelfTestStatus.PASSED)) {
+            result.addAll(Arrays.asList(
+                args(cloneSpec(SequenceFunctionSpec.SHA1, AmazonCorrettoCryptoProvider.INSTANCE)),
+                args(cloneSpec(SequenceFunctionSpec.SHA1, AmazonCorrettoCryptoProvider.INSTANCE)),
+                args(cloneSpec(SequenceFunctionSpec.SHA256, AmazonCorrettoCryptoProvider.INSTANCE)),
+                args(cloneSpec(SequenceFunctionSpec.SHA384, AmazonCorrettoCryptoProvider.INSTANCE)),
+                args(cloneSpec(SequenceFunctionSpec.SHA512, AmazonCorrettoCryptoProvider.INSTANCE))
+            ));
+        }
+        return result;
     }
 
     @Test
@@ -218,6 +257,73 @@ public class SequenceFunctionTests {
         assertHexEquals(actual, "fe550c163f7ce3e8f636ca8770333c4ce33a1d8424b4f383036d424929111144");
     }
 
+    @Test
+    public void badIterable() throws Exception {
+        byte[] i0 = new byte[0];
+        ByteBuffer i1 = ByteBuffer.wrap(decodeHex("01"));
+        ByteBuffer i2 = ByteBuffer.allocateDirect(2);
+        i2.put(decodeHex("0202"));
+        i2.flip();
+        i2 = i2.asReadOnlyBuffer();
+        byte[] i3 = decodeHex("030303");
+        List<Object> inputs = Arrays.asList(i0, i1, i2, "bad_input", i3);
+
+        SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
+        assertThrows(IllegalArgumentException.class, () -> hash.update(inputs));
+    }
+
+    @Test
+    public void finalRejectedAfterPartial() throws Exception {
+        SequenceHash hash = SequenceFunction.getHash(SequenceFunctionSpec.SHA256);
+        hash.updatePartial(new byte[0]);
+        assertThrows(IllegalStateException.class, hash::doFinal);
+    }
+
+    @Test
+    public void canCloneBeforeFinal() throws Exception {
+        byte[] customizationString = "Hello World".getBytes(StandardCharsets.UTF_8);
+        SequenceHash hash = SequenceFunction.getHash(SequenceFunctionSpec.SHA256, customizationString);
+
+        byte[] val1 = new byte[] { (byte) 1, 2, 3, 4 };
+        byte[] val2 = new byte[] { (byte) 4, 2, 3, 1 };
+
+        final byte[] expected = hash.update(val1, val2).doFinal();
+        hash.reset();
+        hash.update(val1);
+        SequenceHash hash2 = hash.clone();
+        final byte[] actual1 = hash.update(val2).doFinal();
+        final byte[] actual2 = hash2.update(val2).doFinal();
+
+        assertHexEquals(actual1, expected);
+        assertHexEquals(actual2, expected);
+    }
+
+    @Test
+    public void canCloneInPartial() throws Exception {
+        byte[] customizationString = "Hello World".getBytes(StandardCharsets.UTF_8);
+        SequenceHash hash = SequenceFunction.getHash(SequenceFunctionSpec.SHA256, customizationString);
+
+        byte[] val1 = new byte[] { (byte) 1, 2, 3, 4 };
+        byte[] val2 = new byte[] { (byte) 4, 2, 3, 1 };
+
+        final byte[] expected = hash.update(val1, val2).doFinal();
+        hash.reset();
+        hash.updatePartial(val1, 0, 2);
+        SequenceHash hash2 = hash.clone();
+        final byte[] actual1 = hash.update(val1, 2, 2).update(val2).doFinal();
+        final byte[] actual2 = hash2.update(val1, 2, 2).update(val2).doFinal();
+
+        assertHexEquals(actual1, expected);
+        assertHexEquals(actual2, expected);
+    }
+
+    @ParameterizedTest(name = "{1}")
+    @MethodSource("knownSpecs")
+    public void testGetSpec(SequenceFunctionSpec spec, String name) throws GeneralSecurityException {
+        SequenceHash hash = SequenceFunction.getHash(spec);
+        assertEquals(spec, hash.getSpec());
+    }
+
     @ParameterizedTest(name = "{1}")
     @MethodSource("knownSpecs")
     public void doFinalRepeats(SequenceFunctionSpec spec, String name) throws GeneralSecurityException {
@@ -225,7 +331,7 @@ public class SequenceFunctionTests {
         SequenceHash hash = SequenceHash.getInstance(spec, customizationString);
 
         byte[] val1 = new byte[] { (byte) 1, 2, 3, 4 };
-        byte[] val2 = new byte[] { (byte) 1, 2, 3, 4 };
+        byte[] val2 = new byte[] { (byte) 4, 2, 3, 1 };
         hash.update(val1);
         hash.update(val2);
         byte[] expected = hash.doFinal();
@@ -524,10 +630,15 @@ public class SequenceFunctionTests {
             return String.format("[%s] %d (%s) -> %s", hashName, functionId, keyHex, finalOutputHex);
         }
     }
-    /*
-     * Tests to write
-     * - Generic error cases
-     * - Cannot (partial)update after doFinal without reset
-     * - Cannot doFinal after partialUpdate
-     */
+
+    @Test
+    public void specClonerClones() throws Exception {
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        SequenceFunctionSpec spec = SequenceFunctionSpec.cloned("SHA-256", 64, sha256);
+        MessageDigest cloned = spec.getHash();
+        assertNotNull(cloned);
+        assertEquals(sha256.getAlgorithm(), cloned.getAlgorithm());
+        assertEquals(sha256.getProvider(), sha256.getProvider());
+        assertNotSame(sha256, cloned);
+    }
 }

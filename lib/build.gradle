@@ -10,6 +10,7 @@ plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
     id 'jacoco'
+    id "com.google.osdetector" version "1.7.3"
 }
 
 version = projectVersion
@@ -24,6 +25,7 @@ dependencies {
     testImplementation libs.junit.jupiter
     testImplementation 'com.google.code.gson:gson:2+'
     testImplementation 'org.bouncycastle:bcprov-jdk18on:1+'
+    testImplementation "software.amazon.cryptools:AmazonCorrettoCryptoProvider:2.+:${osdetector.classifier}"
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

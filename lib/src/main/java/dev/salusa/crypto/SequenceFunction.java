@@ -52,6 +52,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
 
     private long n;
     private long currSegLength;
+    private boolean inPartial;
     private byte[] cachedInner;
 
     private SequenceFunction(final byte[] key, final FunctionIndicator type, byte[] s, SequenceFunctionSpec spec)
@@ -140,6 +141,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         iHash.update(encodeLSBF(currSegLength));
         currSegLength = 0;
         n++;
+        inPartial = false;
         return (T) this;
     }
 
@@ -158,6 +160,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         iHash.update(encodeLSBF(currSegLength));
         currSegLength = 0;
         n++;
+        inPartial = false;
         return (T) this;
     }
 
@@ -238,6 +241,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         if (length > 0) {
             iHash.update(data, offset, length);
         }
+        inPartial = true;
         return (T) this;
     }
 
@@ -254,6 +258,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         assertNotInFinal();
         currSegLength += data.remaining();
         iHash.update(data);
+        inPartial = true;
         return (T) this;
     }
 
@@ -268,6 +273,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
             iHash = (MessageDigest) iBase.clone();
             n = 0;
             currSegLength = 0;
+            inPartial = false;
             cachedInner = null;
         } catch (final CloneNotSupportedException ex) {
             throw new UnexpectedException("SequenceFunction requires that MessageDigest is cloneable", ex);
@@ -283,7 +289,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
      * @return
      */
     public byte[] doFinal() {
-        if (currSegLength > 0) {
+        if (inPartial) {
             // Someone started hashing input but didn't complete a segment.
             throw new IllegalStateException(
                     "doFinal() called immediately after updatePartial(). Must call update() to finish partial input.");
