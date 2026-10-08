@@ -20,3 +20,10 @@ If you want your Java cryptography to be much faster in general, I strongly reco
   Sometimes we need the equivalent of a [Consumer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html) or [Supplier](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html) or similar but the method might throw an Exception (or error). How to do this, especially in a way that is compatible with lambdas? I define some new interfaces to make this easier and will add them as I need them (or if people request).
   - [ThrowingConsumer](lib/src/main/java/dev/salusa/crypto/ThrowingConsumer.java)
   - [ThrowingSupplier](lib/src/main/java/dev/salusa/crypto/ThrowingSupplier.java)
+
+## Disclaimer
+
+This project is the brainchild of a single person and maintained by him in his spare time.
+While he is a professional developer and cryptographic engineer (and thus actually qualified to implement cryptography), this is still just his personal work.
+
+That said, how many of your (transitive) dependencies have a similar of support but are just less honest about it?
