@@ -20,7 +20,9 @@ import java.security.Provider;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -472,6 +474,13 @@ public class SequenceFunctionTests {
     }
 
     private static List<Arguments> buildKats(String subdir) throws Exception {
+        // Build Spec map
+        final Map<String, List<SequenceFunctionSpec>> specs = new HashMap<>();
+        for (Arguments arg : knownSpecs()) {
+            SequenceFunctionSpec spec = (SequenceFunctionSpec) arg.get()[0];
+            specs.computeIfAbsent(spec.getHashName(), (name) -> new ArrayList<>()).add(spec);
+        }
+
         Gson gson = new GsonBuilder()
                 .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
                 .disableJdkUnsafe()
@@ -492,92 +501,28 @@ public class SequenceFunctionTests {
             String content = Files.readString(file);
             List<KAT> kats = gson.fromJson(content, listType);
             for (KAT k : kats) {
-                result.add(Arguments.of(k, k.toString()));
+                for (SequenceFunctionSpec spec : specs.get(katAlgToJce(k.hashName))) {
+                    result.add(Arguments.of(spec, k, k.toString()));
+                }
             }
         }
         return result;
     }
 
-    @ParameterizedTest(name = "{index}: {1}")
+    @ParameterizedTest(name = "{index}: {0} {2}")
     @MethodSource("buildHashKats")
-    public void testHashKats(KAT kat, String name) throws Exception {
+    public void testHashKats(SequenceFunctionSpec spec, KAT kat, String name) throws Exception {
         assumeFalse(kat.mustFail, "MustFail not supported yet");
 
-        SequenceFunctionSpec spec = null;
-        switch (kat.hashName) {
-            case "sha1":
-                spec = SequenceFunctionSpec.SHA1;
-                break;
-            case "sha256":
-                spec = SequenceFunctionSpec.SHA256;
-                break;
-            case "sha384":
-                spec = SequenceFunctionSpec.SHA384;
-                break;
-            case "sha512":
-                spec = SequenceFunctionSpec.SHA512;
-                break;
-            case "sha3_256":
-                spec = SequenceFunctionSpec.SHA3_256;
-                break;
-            case "sha3_384":
-                spec = SequenceFunctionSpec.SHA3_384;
-                break;
-            case "sha3_512":
-                spec = SequenceFunctionSpec.SHA3_512;
-                break;
-            case "blake2b":
-                spec = SequenceFunctionSpec.BLAKE2B_512;
-                break;
-            case "blake2s":
-                spec = SequenceFunctionSpec.BLAKE2S_256;
-                break;
-            default:
-                Assumptions.abort("Unsupported hash function: " + kat.hashName);
-                break;
-        }
         SequenceHash hash = SequenceHash.getInstance(spec, kat.getCustomizer());
         hash.update(kat.getInputs());
         byte[] actual = hash.doFinal();
         assertHexEquals(actual, kat.finalOutputHex);
     }
 
-    @ParameterizedTest(name = "{index}: {1}")
+    @ParameterizedTest(name = "{index}: {0} {2}")
     @MethodSource("buildMacKats")
-    public void testMacKats(KAT kat, String name) throws Exception {
-        SequenceFunctionSpec spec = null;
-        switch (kat.hashName) {
-            case "sha1":
-                spec = SequenceFunctionSpec.SHA1;
-                break;
-            case "sha256":
-                spec = SequenceFunctionSpec.SHA256;
-                break;
-            case "sha384":
-                spec = SequenceFunctionSpec.SHA384;
-                break;
-            case "sha512":
-                spec = SequenceFunctionSpec.SHA512;
-                break;
-            case "sha3_256":
-                spec = SequenceFunctionSpec.SHA3_256;
-                break;
-            case "sha3_384":
-                spec = SequenceFunctionSpec.SHA3_384;
-                break;
-            case "sha3_512":
-                spec = SequenceFunctionSpec.SHA3_512;
-                break;
-            case "blake2b":
-                spec = SequenceFunctionSpec.BLAKE2B_512;
-                break;
-            case "blake2s":
-                spec = SequenceFunctionSpec.BLAKE2S_256;
-                break;
-            default:
-                Assumptions.abort("Unsupported hash function: " + kat.hashName);
-                break;
-        }
+    public void testMacKats(SequenceFunctionSpec spec, KAT kat, String name) throws Exception {
         SequenceMac hash;
         if (kat.mustFail) {
             final SequenceFunctionSpec fSpec = spec;
@@ -592,6 +537,30 @@ public class SequenceFunctionTests {
         assertHexEquals(actual, kat.finalOutputHex);
     }
 
+    private static String katAlgToJce(String katAlg) {
+        switch (katAlg) {
+            case "sha1":
+                return "SHA-1";
+            case "sha256":
+                return "SHA-256";
+            case "sha384":
+                return "SHA-384";
+            case "sha512":
+                return "SHA-512";
+            case "sha3_256":
+                return "SHA3-256";
+            case "sha3_384":
+                return "SHA3-384";
+            case "sha3_512":
+                return "SHA3-512";
+            case "blake2b":
+                return "BLAKE2B-512";
+            case "blake2s":
+                return "BLAKE2S-256";
+            default:
+                throw new IllegalArgumentException("Unsupported hash function: " + katAlg);
+        }
+    }
     public static final class KAT {
         public String hashName;
         public int functionId;
