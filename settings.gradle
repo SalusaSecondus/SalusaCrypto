@@ -12,3 +12,4 @@ plugins {
 
 rootProject.name = projectName
 include('lib')
+project(":lib").name = projectName

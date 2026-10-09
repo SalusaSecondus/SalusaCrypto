@@ -11,6 +11,8 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id "com.google.osdetector" version "1.7.3"
+    id 'maven-publish'
+    id 'org.jreleaser' version '1.26.0'
 }
 
 version = projectVersion
@@ -35,6 +37,8 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+    withJavadocJar()
+    withSourcesJar()
 }
 
 tasks.named('test') {
@@ -45,4 +49,66 @@ tasks.named('test') {
 
 jacocoTestReport {
     dependsOn test // tests are required to run before generating the report
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'dev.salusa'
+            artifactId = 'crypto'
+
+            from components.java
+
+            pom {
+                name = 'SalusaCrypto'
+                description = 'A collection of zero-dependency cryptographic classes and implementations.'
+                url = 'https://github.com/SalusaSecondus/SalusaCrypto'
+                inceptionYear = '2026'
+                licenses {
+                    license {
+                        name = 'Apache-2.0'
+                        url = 'https://spdx.org/licenses/Apache-2.0.html'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'salusasecondus'
+                        name = 'SalusaSecondus'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/SalusaSecondus/SalusaCrypto.git'
+                    developerConnection = 'scm:git:ssh://github.com/SalusaSecondus/SalusaCrypto.git'
+                    url = 'https://github.com/SalusaSecondus/SalusaCrypto'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('staging-deploy')
+
+        }
+    }
+}
+
+jreleaser {
+    signing {
+        pgp {
+            active = 'ALWAYS'
+            armored = true
+        }
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('build/staging-deploy')
+                }
+            }
+        }
+    }
 }
