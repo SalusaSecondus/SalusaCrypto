@@ -9,6 +9,8 @@ Unless otherwise specified, everything in this package requires no dependencies 
 
 If you want your Java cryptography to be much faster in general, I strongly recommend adopting the [Amazon Corretto Crypto Provider (ACCP)](https://github.com/corretto/amazon-corretto-crypto-provider/), a former project of mine. It really does make everything better.
 
+**Versions prior to 1.0 are *not* safe for use and may contain serious bugs.**
+
 ## Installation
 
 I generally recommend only pinning the major version number so that you always get the most recent version of this library. If you have even halfway decent unit-tests, that will be sufficient for automatic upgrades of minor and patch versions.
