@@ -94,21 +94,21 @@ publishing {
 }
 
 jreleaser {
-    signing {
-        pgp {
-            active = 'ALWAYS'
-            armored = true
-        }
+  signing {
+    pgp {
+      active = 'ALWAYS'
+      armored = true
     }
-    deploy {
-        maven {
-            mavenCentral {
-                sonatype {
-                    active = 'ALWAYS'
-                    url = 'https://central.sonatype.com/api/v1/publisher'
-                    stagingRepository('build/staging-deploy')
-                }
-            }
+  }
+  deploy {
+    maven {
+      mavenCentral {
+        sonatype {
+          active = 'RELEASE'
+          url = 'https://central.sonatype.com/api/v1/publisher'
+          stagingRepository('build/staging-deploy')
         }
+      }
     }
+  }
 }
