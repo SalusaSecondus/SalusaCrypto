@@ -20,6 +20,7 @@ import javax.crypto.SecretKey;
  * of Bits</a>
  * blog post to understand the properties and uses of these functions.
  * 
+ * <p>All inputs all limited to either 2^64 bytes or limits of the underlying Java and Cryptographic platform.
  * <p>
  * Use the {@code getHash()} or {@code getMac()} methods to get instances.
  * 
@@ -112,7 +113,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
      * before any {@code doFinal()} method may be called.
      */
     public boolean partialInputProcessed() {
-        return currSegLength > 0;
+        return inPartial;
     }
 
     /**
@@ -237,10 +238,10 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
     @SuppressWarnings("unchecked")
     public T updatePartial(byte[] data, int offset, int length) {
         assertNotInFinal();
-        currSegLength += length;
-        if (length > 0) {
+        if (length != 0) {
             iHash.update(data, offset, length);
         }
+        currSegLength += length;
         inPartial = true;
         return (T) this;
     }
@@ -256,8 +257,9 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
     @SuppressWarnings("unchecked")
     public T updatePartial(ByteBuffer data) {
         assertNotInFinal();
-        currSegLength += data.remaining();
+        int length = data.remaining();
         iHash.update(data);
+        currSegLength += length;
         inPartial = true;
         return (T) this;
     }
@@ -375,6 +377,7 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
             byte[] sPrime = derive(s, oBase, (byte) 0x00, spec.getBlockSize());
 
             oBase.update(k_o);
+            Arrays.fill(k_o, (byte) 0);
             oBase.update(headerO(spec.getBlockSize(), f, length(s), length(k)));
             oBase.update(sPrime);
 
@@ -387,10 +390,14 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
         try {
             initOuter(s);
             iBase = (MessageDigest) spec.getHash();
+            if (iBase == oBase) {
+                throw new IllegalStateException("Spec returned same digest twice.");
+            }
 
             byte[] k_i = derive(k, iBase, (byte) 0x55, spec.getBlockSize());
 
             iBase.update(k_i);
+            Arrays.fill(k_i, (byte) 0);
             iBase.update(headerI(spec.getBlockSize(), f, length(k)));
         } catch (final GeneralSecurityException ex) {
             throw ex;
@@ -456,9 +463,6 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
             iPrime = pad(i, blockSize);
         } else {
             iPrime = pad(h.digest(i), blockSize);
-        }
-        if (length(i) == blockSize) {
-            System.err.println("value: " + InternalUtils.bytesToHex(iPrime));
         }
         iPrime[0] ^= tweak;
         return iPrime;
@@ -552,6 +556,10 @@ public abstract class SequenceFunction<T extends SequenceFunction<T>> implements
 
         private SequenceMac(SecretKey key, byte[] s, SequenceFunctionSpec spec) throws GeneralSecurityException {
             super(checkedGetKey(key), F_SEQMAC, s, spec);
+        }
+
+        public boolean verifyMac(final byte[] mac) {
+            return MessageDigest.isEqual(doFinal(), mac);
         }
     }
 }

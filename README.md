@@ -9,6 +9,26 @@ Unless otherwise specified, everything in this package requires no dependencies 
 
 If you want your Java cryptography to be much faster in general, I strongly recommend adopting the [Amazon Corretto Crypto Provider (ACCP)](https://github.com/corretto/amazon-corretto-crypto-provider/), a former project of mine. It really does make everything better.
 
+## Installation
+
+I generally recommend only pinning the major version number so that you always get the most recent version of this library. If you have even halfway decent unit-tests, that will be sufficient for automatic upgrades of minor and patch versions.
+
+### Maven
+
+```xml
+<dependency>
+  <groupId>dev.salusa</groupId>
+  <artifactId>crypto</artifactId>
+  <version>[1.0, 2.0)</version>
+</dependency>
+```
+
+### Gradle
+
+```
+implementation 'dev.salusa:crypto:1.+'
+```
+
 ## Implemented Specifications
 
 - `SequenceHash` and `SequenceMac` from [c2sp.org/sequencehash](https://c2sp.org/sequencehash) are implemented in by [SequenceFunction](lib/src/main/java/dev/salusa/crypto/SequenceFunction.java). This implementation requires that `MessageDigest` is cloneable. (All standard JCA providers, including [ACCP] and [BouncyCastle] meet the requirements.).

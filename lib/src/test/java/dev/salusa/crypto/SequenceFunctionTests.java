@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -62,6 +61,7 @@ public class SequenceFunctionTests {
         return SequenceFunctionSpec.jce(tmpl.getHashName(), prov, tmpl.getBlockSize());
     }
 
+    @SuppressWarnings("deprecated")
     public static List<Arguments> knownSpecs() {
         List<Arguments> result = new ArrayList<>();
         result.addAll(Arrays.asList(
@@ -535,6 +535,7 @@ public class SequenceFunctionTests {
         hash.update(kat.getInputs());
         byte[] actual = hash.doFinal();
         assertHexEquals(actual, kat.finalOutputHex);
+        assertTrue(hash.verifyMac(kat.getFinalOutput()));
     }
 
     private static String katAlgToJce(String katAlg) {
@@ -588,6 +589,10 @@ public class SequenceFunctionTests {
 
         public byte[] getCustomizer() {
             return decodeHex(customizerHex);
+        }
+
+        public byte[] getFinalOutput() {
+            return decodeHex(finalOutputHex);
         }
 
         public List<byte[]> getInputs() {

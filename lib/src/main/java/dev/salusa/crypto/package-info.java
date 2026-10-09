@@ -7,6 +7,6 @@
  * dependencies beyond those provided by stock Java and will work with any JCA
  * implementations.
  * 
- * @version 0.1
+ * @version 0.1.1
  */
 package dev.salusa.crypto;

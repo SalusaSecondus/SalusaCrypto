@@ -10,7 +10,10 @@ import java.security.spec.AlgorithmParameterSpec;
  * Comes with prebuilt instances for the most common cases.
  */
 public class SequenceFunctionSpec implements AlgorithmParameterSpec {
-    /** SHA-1 */
+    /**
+     * SHA-1
+     * @deprecated SHA-1 is insecure. Do not use.
+     * */
     public static final SequenceFunctionSpec SHA1 = SequenceFunctionSpec.jce("SHA-1", 64);
     /** SHA-256 */
     public static final SequenceFunctionSpec SHA256 = SequenceFunctionSpec.jce("SHA-256", 64);
