@@ -5,6 +5,8 @@ Some will be implementing standards. Some are useful optimizations. And others a
 
 Unless otherwise specified, everything in this package requires no dependencies beyond those provided by stock Java and will work with any JCA implementations.
 
+[Javadoc](https://salusasecondus.github.io/SalusaCrypto/dev/salusa/crypto/package-summary.html) is available and is updated to match the most recent release.
+
 If you want your Java cryptography to be much faster in general, I strongly recommend adopting the [Amazon Corretto Crypto Provider (ACCP)](https://github.com/corretto/amazon-corretto-crypto-provider/), a former project of mine. It really does make everything better.
 
 ## Implemented Specifications

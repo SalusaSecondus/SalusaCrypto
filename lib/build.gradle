@@ -41,6 +41,11 @@ java {
     withSourcesJar()
 }
 
+tasks.named('javadoc') {
+    options.version = true
+    options.memberLevel = 'PUBLIC'
+}
+
 tasks.named('test') {
     environment "CCTV_KATS_PATH", "${project.rootDir}/CCTV/sequencehash"
     // Use JUnit Platform for unit tests.
@@ -108,6 +113,27 @@ jreleaser {
           url = 'https://central.sonatype.com/api/v1/publisher'
           stagingRepository('build/staging-deploy')
         }
+      }
+    }
+  }
+  release {
+    github {
+        enabled = true
+        repoOwner = 'SalusaSecondus'
+        name = 'SalusaCrypto'
+        host = 'github.com'
+        username = 'SalusaSecondus'
+        apiEndpoint = 'https://api.github.com'
+              // 
+      prerelease {
+        // Marks the release as prerelease.
+        // Defaults to `false`.
+        // 
+        enabled = false
+
+        // A regex to determine if the project version is a prerelease
+        //  
+        pattern = '0\\..*'
       }
     }
   }
