@@ -7,7 +7,7 @@
  * dependencies beyond those provided by stock Java and will work with any JCA
  * implementations.
  * 
- * <em>VERSIONS PRIOR TO 1.0 ARE NOT SUITABLE FOR USE AND MAY CONTAIN SERIOUS BUGS.</em>
+ * <p><em>VERSIONS PRIOR TO 1.0 ARE NOT SUITABLE FOR USE AND MAY CONTAIN SERIOUS BUGS.</em>
  * 
  * @version 0.1.1
  */
