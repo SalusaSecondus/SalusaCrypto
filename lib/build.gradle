@@ -13,6 +13,8 @@ plugins {
     id "com.google.osdetector" version "1.7.3"
     id 'maven-publish'
     id 'org.jreleaser' version '1.26.0'
+    id("com.github.spotbugs") version "6.5.12"
+    id 'checkstyle'
 }
 
 version = projectVersion
@@ -138,3 +140,22 @@ jreleaser {
     }
   }
 }
+
+tasks.spotbugsMain {
+    excludeFilter = file("spotbugs_exclude.xml")
+    reports.create("html") {
+        required = true
+        outputLocation = file("$buildDir/reports/spotbugs.html")
+        setStylesheet("fancy-hist.xsl")
+    }
+}
+tasks.spotbugsTest {
+    excludeFilter = file("spotbugs_exclude.xml")
+    reports.create("html") {
+        required = true
+        outputLocation = file("$buildDir/reports/spotbugs_test.html")
+        setStylesheet("fancy-hist.xsl")
+    }
+}
+tasks.publish.dependsOn("check")
+tasks.publish.dependsOn("test")

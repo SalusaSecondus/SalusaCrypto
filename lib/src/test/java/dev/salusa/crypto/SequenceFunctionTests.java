@@ -1,6 +1,7 @@
 package dev.salusa.crypto;
 
-import static dev.salusa.crypto.InternalUtils.*;
+import static dev.salusa.crypto.InternalUtils.decodeHex;
+import static dev.salusa.crypto.InternalUtils.bytesToHex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -65,7 +66,6 @@ public class SequenceFunctionTests {
     public static List<Arguments> knownSpecs() {
         List<Arguments> result = new ArrayList<>();
         result.addAll(Arrays.asList(
-                args(SequenceFunctionSpec.SHA1),
                 args(SequenceFunctionSpec.SHA1),
                 args(SequenceFunctionSpec.SHA256),
                 args(SequenceFunctionSpec.SHA384),
