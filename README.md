@@ -50,4 +50,4 @@ implementation 'dev.salusa:crypto:1.+'
 This project is the brainchild of a single person and maintained by him in his spare time.
 While he is a professional developer and cryptographic engineer (and thus actually qualified to implement cryptography), this is still just his personal work.
 
-That said, how many of your (transitive) dependencies have a similar of support but are just less honest about it?
+That said, how many of your (transitive) dependencies have a similar level of support but are just less honest about it?
