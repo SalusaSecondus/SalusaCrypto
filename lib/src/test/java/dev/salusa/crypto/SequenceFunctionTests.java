@@ -35,7 +35,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
-import com.amazon.corretto.crypto.provider.SelfTestStatus;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -62,7 +61,7 @@ public class SequenceFunctionTests {
         return SequenceFunctionSpec.jce(tmpl.getHashName(), prov, tmpl.getBlockSize());
     }
 
-    @SuppressWarnings("deprecated")
+    @SuppressWarnings("deprecation")
     public static List<Arguments> knownSpecs() {
         List<Arguments> result = new ArrayList<>();
         result.addAll(Arrays.asList(
@@ -77,7 +76,6 @@ public class SequenceFunctionTests {
                 args(SequenceFunctionSpec.BLAKE2S_256),
                 // Explicit providers for some of them
                 args(cloneSpec(SequenceFunctionSpec.SHA1, "BC")),
-                args(cloneSpec(SequenceFunctionSpec.SHA1, "BC")),
                 args(cloneSpec(SequenceFunctionSpec.SHA256, "BC")),
                 args(cloneSpec(SequenceFunctionSpec.SHA384, "BC")),
                 args(cloneSpec(SequenceFunctionSpec.SHA512, "BC")),
@@ -85,9 +83,8 @@ public class SequenceFunctionTests {
                 args(cloneSpec(SequenceFunctionSpec.SHA3_384, "BC")),
                 args(cloneSpec(SequenceFunctionSpec.SHA3_512, "BC"))
             ));
-        if (AmazonCorrettoCryptoProvider.INSTANCE.runSelfTests().equals(SelfTestStatus.PASSED)) {
+        if (AmazonCorrettoCryptoProvider.INSTANCE.getLoadingError() == null) {
             result.addAll(Arrays.asList(
-                args(cloneSpec(SequenceFunctionSpec.SHA1, AmazonCorrettoCryptoProvider.INSTANCE)),
                 args(cloneSpec(SequenceFunctionSpec.SHA1, AmazonCorrettoCryptoProvider.INSTANCE)),
                 args(cloneSpec(SequenceFunctionSpec.SHA256, AmazonCorrettoCryptoProvider.INSTANCE)),
                 args(cloneSpec(SequenceFunctionSpec.SHA384, AmazonCorrettoCryptoProvider.INSTANCE)),

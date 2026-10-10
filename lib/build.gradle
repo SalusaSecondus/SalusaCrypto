@@ -24,12 +24,24 @@ repositories {
     mavenCentral()
 }
 
+// ACCP doesn't provide a windows JAR, so the tests will fail to compile if we don't special case it.
+// We select "linux-x86_64" for no particular reason. It exists and gives us the classes we need.
+// Actually trying to use ACCP will fail because the native library is wrong. But that's okay because
+// our test code only uses ACCP if it is actually working.
+def accpClassifier() {
+    if (osdetector.os.equals("windows")) {
+        return "linux-x86_64";
+    } else {
+        return osdetector.classifier;
+    }
+}
+
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation libs.junit.jupiter
     testImplementation 'com.google.code.gson:gson:2+'
     testImplementation 'org.bouncycastle:bcprov-jdk18on:1+'
-    testImplementation "software.amazon.cryptools:AmazonCorrettoCryptoProvider:2.+:${osdetector.classifier}"
+    testImplementation "software.amazon.cryptools:AmazonCorrettoCryptoProvider:2.+:${accpClassifier()}"
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
