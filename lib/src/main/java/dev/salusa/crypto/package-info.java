@@ -9,6 +9,6 @@
  * 
  * <p><em>VERSIONS PRIOR TO 1.0 ARE NOT SUITABLE FOR USE AND MAY CONTAIN SERIOUS BUGS.</em>
  * 
- * @version 0.1.1
+ * @version 1.0.0
  */
 package dev.salusa.crypto;
