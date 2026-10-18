@@ -17,26 +17,23 @@ final class InternalUtils {
         return arr.clone();
     }
 
-    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
-
-    static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
+  static byte leftShift(byte[] arr, int shift) {
+    if (shift > 8 || shift < 0) {
+      throw new IllegalArgumentException();
     }
-
-
-  static byte[] decodeHex(String hex) {
-    if (hex.length() % 2 != 0) {
-      throw new IllegalArgumentException("Input length must be even");
+    if (arr.length == 0) {
+      return 0;
     }
-    byte[] result = new byte[hex.length() / 2];
-    for (int x = 0; x < hex.length() / 2; x++) {
-      result[x] = (byte) Integer.parseInt(hex.substring(2 * x, 2 * x + 2), 16);
+    final byte mask = (byte) ((1 << shift) - 1);
+    final byte result = (byte) (arr[0] & mask);
+    
+    for (int idx = 0; idx < arr.length; idx++) {
+      byte carry = 0;;
+      if (idx < arr.length - 1) {
+        carry = (byte) ((arr[idx + 1] >> (8 - shift)) & mask);
+      }
+      arr[idx] <<= shift;
+      arr[idx] |= carry;
     }
     return result;
   }
