@@ -23,7 +23,14 @@ public final class X256GcmKeySpec implements  Key, KeySpec {
         this.k1 = k1;
     }
     
+    public static X256GcmKeySpec getInstance(final byte[] k, int offset) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
+        return getInstance(new SecretKeySpec(k, offset, 32, "AES"));
+    }
+
     public static X256GcmKeySpec getInstance(final byte[] k) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
+        if (k.length != 32) {
+            throw new InvalidKeyException("Key must be 32 bytes long.");
+        }
         return getInstance(new SecretKeySpec(k, "AES"));
     }
 
