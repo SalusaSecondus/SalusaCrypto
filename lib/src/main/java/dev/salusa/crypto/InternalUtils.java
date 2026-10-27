@@ -25,7 +25,7 @@ final class InternalUtils {
       return 0;
     }
     final byte mask = (byte) ((1 << shift) - 1);
-    final byte result = (byte) (arr[0] & mask);
+    final byte result = (byte) ((arr[0] >>> (8 - shift)) & mask);
     
     for (int idx = 0; idx < arr.length; idx++) {
       byte carry = 0;

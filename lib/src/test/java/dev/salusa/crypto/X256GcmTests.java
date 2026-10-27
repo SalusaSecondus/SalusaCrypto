@@ -2,6 +2,7 @@ package dev.salusa.crypto;
 
 import static dev.salusa.crypto.TestUtils.assertHexEquals;
 import static dev.salusa.crypto.TestUtils.HEX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
 
@@ -60,7 +61,7 @@ public class X256GcmTests {
         byte[] rawIv = new byte[24];
         byte[] tmpLen = new byte[1];
 
-        for (int iter = 0; iter <= 10_000; iter++) {
+        for (int iter = 0; iter < 10_000; iter++) {
             xof.doOutput(rawKey, 0, 32);
             xof.doOutput(rawIv, 0, 24);
 
