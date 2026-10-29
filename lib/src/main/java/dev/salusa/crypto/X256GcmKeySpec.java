@@ -200,6 +200,9 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
         }
     }
 
+    /**
+     * Returns the raw AES key {@code k} used to create this object.
+     */
     public SecretKey getK() {
         return k;
     }

@@ -4,6 +4,8 @@ import static dev.salusa.crypto.TestUtils.assertHexEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static dev.salusa.crypto.TestUtils.BC;
 import static dev.salusa.crypto.TestUtils.HEX;
@@ -12,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -36,8 +39,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import com.amazon.corretto.crypto.provider.InputBuffer.ByteBufferFunction;
 
 public class X256GcmTests {
     private static final String ALG_NAME = "XAES-256-GCM";
@@ -75,6 +76,9 @@ public class X256GcmTests {
         assertEquals("RAW", key.getFormat());
         assertHexEquals(key.getEncoded(), "0303030303030303030303030303030303030303030303030303030303030303");
         X256Gcm xgcm = getInstance(cipherProvider);
+        if (cipherProvider instanceof Provider p) {
+            assertEquals(p, xgcm.getProvider());
+        }
         IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
         byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
         byte[] aad = "c2sp.org/XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
@@ -382,5 +386,65 @@ public class X256GcmTests {
         assertEquals(24, iv1.length);
         assertEquals(24, iv2.length);
         assertFalse(Arrays.equals(iv1, iv2));
+    }
+
+    @Test
+    public void toStringWorks() {
+        String result = X256Gcm.getInstance().toString();
+        assertNotNull(result);
+        assertNotEquals("", result);
+    }
+
+    @Test
+    public void badIv() throws Exception {
+        final X256GcmKeySpec key = randomKey(null);
+        final X256Gcm xgcm = X256Gcm.getInstance();
+        final IvParameterSpec badIv = new IvParameterSpec(new byte[16]);
+        assertThrows(InvalidAlgorithmParameterException.class, () -> xgcm.init(Cipher.ENCRYPT_MODE, key, badIv));
+    }
+
+    @Test 
+    public void randomIvNotDecrypt() throws Exception {
+        final X256GcmKeySpec key = randomKey(null);
+        final X256Gcm xgcm = X256Gcm.getInstance();
+        assertThrows(IllegalArgumentException.class, () -> xgcm.init(Cipher.DECRYPT_MODE, key));
+        assertThrows(IllegalArgumentException.class, () -> xgcm.init(Cipher.UNWRAP_MODE, key));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("providers")
+    public void missedCases(String name, Object specProvider, Object cipherProvider) throws Exception {
+        X256GcmKeySpec key = buildSpec(
+            HEX.parseHex("0101010101010101010101010101010101010101010101010101010101010101"),
+            specProvider);
+        X256Gcm xgcm = getInstance(cipherProvider);
+        IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
+        byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
+        xgcm.init(Cipher.ENCRYPT_MODE, key, iv);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        int split = plaintext.length / 2;
+        int remaining = plaintext.length - split;
+        byte[] tmp = xgcm.update(plaintext, 0, plaintext.length / 2);
+        if (tmp != null) {
+            baos.write(tmp);
+        }
+        tmp = new byte[xgcm.getOutputSize(remaining)];
+        int outLen = xgcm.update(plaintext, split, remaining, tmp);
+        baos.write(tmp, 0, outLen);
+
+        tmp = new byte[xgcm.getOutputSize(0) + 1];
+        outLen = xgcm.doFinal(tmp, 1);
+        baos.write(tmp, 1, outLen);
+        byte[] actual = baos.toByteArray();
+
+
+        assertHexEquals(actual, "ce546ef63c9cc60765923609b33a9a1974e96e52daf2fcf7075e2271");
+
+        xgcm.init(Cipher.DECRYPT_MODE, key, iv);
+        tmp = new byte[xgcm.getOutputSize(actual.length)];
+        outLen = xgcm.doFinal(actual, 0, actual.length, tmp);
+        byte[] decrypted = Arrays.copyOf(tmp, outLen);
+        assertHexEquals(decrypted, plaintext);
     }
 }
