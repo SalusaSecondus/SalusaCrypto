@@ -1,5 +1,7 @@
 package dev.salusa.crypto;
 
+import java.security.SecureRandom;
+
 /**
  * DO NOT USE
  * 
@@ -9,8 +11,15 @@ package dev.salusa.crypto;
  */
 final class InternalUtils {
     static final byte[] EMPTY_ARRAY = new byte[0];
+    static final ThreadLocal<SecureRandom> RNG = ThreadLocal.withInitial(SecureRandom::new);
 
-    static byte[] cloneArray(byte[] arr) {
+  static byte[] randomBytes(int length) {
+    byte[] result = new byte[length];
+    RNG.get().nextBytes(result);
+    return result;
+  }
+  
+  static byte[] cloneArray(byte[] arr) {
         if (arr == null || arr.length == 0) {
             return EMPTY_ARRAY;
         }

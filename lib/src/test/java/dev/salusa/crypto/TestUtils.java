@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HexFormat;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
 class TestUtils {
+    static final BouncyCastleProvider BC = new BouncyCastleProvider();
     static final HexFormat HEX = HexFormat.of();
 
     static void assertHexEquals(byte[] actual, String expected) {

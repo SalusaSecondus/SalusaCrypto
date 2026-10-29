@@ -3,6 +3,8 @@ package dev.salusa.crypto;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Provider;
 import java.security.spec.KeySpec;
 
 import javax.crypto.BadPaddingException;
@@ -27,6 +29,14 @@ public final class X256GcmKeySpec implements  Key, KeySpec {
         return getInstance(new SecretKeySpec(k, offset, 32, "AES"));
     }
 
+    public static X256GcmKeySpec getInstance(final byte[] k, int offset, String providerName) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
+        return getInstance(new SecretKeySpec(k, offset, 32, "AES"), providerName);
+    }
+
+    public static X256GcmKeySpec getInstance(final byte[] k, int offset, Provider provider) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
+        return getInstance(new SecretKeySpec(k, offset, 32, "AES"), provider);
+    }
+
     public static X256GcmKeySpec getInstance(final byte[] k) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         if (k.length != 32) {
             throw new InvalidKeyException("Key must be 32 bytes long.");
@@ -34,8 +44,32 @@ public final class X256GcmKeySpec implements  Key, KeySpec {
         return getInstance(new SecretKeySpec(k, "AES"));
     }
 
+    public static X256GcmKeySpec getInstance(final byte[] k, String providerName) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
+        if (k.length != 32) {
+            throw new InvalidKeyException("Key must be 32 bytes long.");
+        }
+        return getInstance(new SecretKeySpec(k, "AES"), providerName);
+    }
+
+    public static X256GcmKeySpec getInstance(final byte[] k, Provider provider) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
+        if (k.length != 32) {
+            throw new InvalidKeyException("Key must be 32 bytes long.");
+        }
+        return getInstance(new SecretKeySpec(k, "AES"), provider);
+    }
+
     public static X256GcmKeySpec getInstance(final SecretKey k) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         final Cipher c = Cipher.getInstance("AES/ECB/NoPadding");
+        return getInstance(k, c);
+    }
+
+    public static X256GcmKeySpec getInstance(final SecretKey k, String providerName) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
+        final Cipher c = Cipher.getInstance("AES/ECB/NoPadding", providerName);
+        return getInstance(k, c);
+    }
+
+    public static X256GcmKeySpec getInstance(final SecretKey k, Provider provider) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
+        final Cipher c = Cipher.getInstance("AES/ECB/NoPadding", provider);
         return getInstance(k, c);
     }
 

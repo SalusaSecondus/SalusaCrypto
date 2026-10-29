@@ -1,11 +1,11 @@
 package dev.salusa.crypto;
 
 import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.Provider;
 import java.util.HexFormat;
 
@@ -13,6 +13,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.ExemptionMechanism;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.GCMParameterSpec;
@@ -21,7 +22,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class X256Gcm {
     private static final int AES_BLOCK_LENGTH = 16;
-    private static final byte[] M_BASE = HexFormat.of().parseHex("0001580000000000000000000000000000025800000000000000000000000000");
+    private static final byte[] M_BASE = HexFormat.of()
+            .parseHex("0001580000000000000000000000000000025800000000000000000000000000");
 
     private final Cipher ecb;
     private final Cipher gcm;
@@ -32,9 +34,23 @@ public final class X256Gcm {
             final Cipher ecb = Cipher.getInstance("AES/ECB/NoPadding");
             final Cipher gcm = Cipher.getInstance("AES/GCM/NoPadding");
             return new X256Gcm(ecb, gcm);
-        } catch (final GeneralSecurityException ex) {
-            throw new UnexpectedException("Both AES/ECB/NoPadding and AES/GCM/NoPadding are expected to always be present.", ex);
+        } catch (final NoSuchAlgorithmException | NoSuchPaddingException ex) {
+            throw new UnexpectedException(
+                    "Both AES/ECB/NoPadding and AES/GCM/NoPadding are expected to always be present.", ex);
         }
+    }
+
+    public static X256Gcm getInstance(String providerName)
+            throws NoSuchProviderException, NoSuchAlgorithmException, NoSuchPaddingException {
+        final Cipher ecb = Cipher.getInstance("AES/ECB/NoPadding", providerName);
+        final Cipher gcm = Cipher.getInstance("AES/GCM/NoPadding", providerName);
+        return new X256Gcm(ecb, gcm);
+    }
+
+    public static X256Gcm getInstance(Provider provider) throws NoSuchAlgorithmException, NoSuchPaddingException {
+        final Cipher ecb = Cipher.getInstance("AES/ECB/NoPadding", provider);
+        final Cipher gcm = Cipher.getInstance("AES/GCM/NoPadding", provider);
+        return new X256Gcm(ecb, gcm);
     }
 
     private X256Gcm(final Cipher ecb, final Cipher gcm) {
@@ -42,7 +58,20 @@ public final class X256Gcm {
         this.gcm = gcm;
     }
 
-    public void init(final int cipherMode, final X256GcmKeySpec key, final IvParameterSpec ivSpec) throws InvalidAlgorithmParameterException, InvalidKeyException {
+    public void init(final int cipherMode, final X256GcmKeySpec key) throws InvalidKeyException {
+        if (cipherMode != Cipher.ENCRYPT_MODE && cipherMode != Cipher.WRAP_MODE) {
+            throw new IllegalArgumentException(
+                    "IvParameterSpec may only be omitted for Cipher.ENCRYPT_MODE and Cipher.WRAP_MODE");
+        }
+        try {
+            init(cipherMode, key, new IvParameterSpec(InternalUtils.randomBytes(24)));
+        } catch (final InvalidAlgorithmParameterException ex) {
+            throw new UnexpectedException(ex);
+        }
+    }
+
+    public void init(final int cipherMode, final X256GcmKeySpec key, final IvParameterSpec ivSpec)
+            throws InvalidAlgorithmParameterException, InvalidKeyException {
         final byte[] rawIv = ivSpec.getIV();
         if (rawIv.length != 24) {
             throw new InvalidAlgorithmParameterException("IV must be 192 bits (24 bytes) long, not " + rawIv.length);
@@ -64,7 +93,7 @@ public final class X256Gcm {
             throw new UnexpectedException("AES-ECB returned result of wrong length: " + rawKx.length);
         }
         final SecretKey kx = new SecretKeySpec(rawKx, "AES");
-        
+
         final GCMParameterSpec gcmSpec = new GCMParameterSpec(128, rawIv, 12, 12);
         gcm.init(cipherMode, kx, gcmSpec);
     }
@@ -77,23 +106,28 @@ public final class X256Gcm {
         return gcm.doFinal(input);
     }
 
-    public int doFinal(byte[] output, int outputOffset) throws IllegalBlockSizeException, ShortBufferException, BadPaddingException {
+    public int doFinal(byte[] output, int outputOffset)
+            throws IllegalBlockSizeException, ShortBufferException, BadPaddingException {
         return gcm.doFinal(output, outputOffset);
     }
 
-    public byte[] doFinal(byte[] input, int inputOffset, int inputLen) throws IllegalBlockSizeException, BadPaddingException {
+    public byte[] doFinal(byte[] input, int inputOffset, int inputLen)
+            throws IllegalBlockSizeException, BadPaddingException {
         return gcm.doFinal(input, inputOffset, inputLen);
     }
 
-    public int doFinal(byte[] input, int inputOffset, int inputLen, byte[] output) throws ShortBufferException, IllegalBlockSizeException, BadPaddingException {
+    public int doFinal(byte[] input, int inputOffset, int inputLen, byte[] output)
+            throws ShortBufferException, IllegalBlockSizeException, BadPaddingException {
         return gcm.doFinal(input, inputOffset, inputLen, output);
     }
 
-    public int doFinal(byte[] input, int inputOffset, int inputLen, byte[] output, int outputOffset) throws ShortBufferException, IllegalBlockSizeException, BadPaddingException {
+    public int doFinal(byte[] input, int inputOffset, int inputLen, byte[] output, int outputOffset)
+            throws ShortBufferException, IllegalBlockSizeException, BadPaddingException {
         return gcm.doFinal(input, inputOffset, inputLen, output, outputOffset);
     }
 
-    public int doFinal(ByteBuffer input, ByteBuffer output) throws ShortBufferException, IllegalBlockSizeException, BadPaddingException {
+    public int doFinal(ByteBuffer input, ByteBuffer output)
+            throws ShortBufferException, IllegalBlockSizeException, BadPaddingException {
         return gcm.doFinal(input, output);
     }
 
@@ -121,12 +155,13 @@ public final class X256Gcm {
         return gcm.getProvider();
     }
 
-    @Override 
+    @Override
     public String toString() {
-        return getAlgorithm();
+        return "X256Gcm from " + gcm.getProvider();
     }
 
-    public Key unwrap(byte[] wrappedKey, String wrappedKeyAlgorithm, int wrappedKeyType) throws InvalidKeyException, NoSuchAlgorithmException {
+    public Key unwrap(byte[] wrappedKey, String wrappedKeyAlgorithm, int wrappedKeyType)
+            throws InvalidKeyException, NoSuchAlgorithmException {
         return gcm.unwrap(wrappedKey, wrappedKeyAlgorithm, wrappedKeyType);
     }
 
@@ -142,7 +177,8 @@ public final class X256Gcm {
         return gcm.update(input, inputOffset, inputLen, output);
     }
 
-    public int update(byte[] input, int inputOffset, int inputLen, byte[] output, int outputOffset) throws ShortBufferException {
+    public int update(byte[] input, int inputOffset, int inputLen, byte[] output, int outputOffset)
+            throws ShortBufferException {
         return gcm.update(input, inputOffset, inputLen, output, outputOffset);
     }
 
