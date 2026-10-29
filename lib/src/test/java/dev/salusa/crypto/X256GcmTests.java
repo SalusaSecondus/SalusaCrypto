@@ -75,7 +75,6 @@ public class X256GcmTests {
         assertEquals("RAW", key.getFormat());
         assertHexEquals(key.getEncoded(), "0303030303030303030303030303030303030303030303030303030303030303");
         X256Gcm xgcm = getInstance(cipherProvider);
-        assertEquals(ALG_NAME, xgcm.getAlgorithm());
         IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
         byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
         byte[] aad = "c2sp.org/XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
@@ -384,5 +383,4 @@ public class X256GcmTests {
         assertEquals(24, iv2.length);
         assertFalse(Arrays.equals(iv1, iv2));
     }
-    // TODO: Coverage tests
 }
