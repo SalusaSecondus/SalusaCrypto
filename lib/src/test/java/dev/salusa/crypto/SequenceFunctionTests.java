@@ -1,7 +1,7 @@
 package dev.salusa.crypto;
 
-import static dev.salusa.crypto.InternalUtils.decodeHex;
-import static dev.salusa.crypto.InternalUtils.bytesToHex;
+import static dev.salusa.crypto.TestUtils.assertHexEquals;
+import static dev.salusa.crypto.TestUtils.HEX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -128,9 +128,9 @@ public class SequenceFunctionTests {
     public void smokeSha256() throws Exception {
         SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
         hash.update(null, 0, 0);
-        hash.update(decodeHex("01"));
-        hash.update(decodeHex("0202"));
-        hash.update(decodeHex("030303"));
+        hash.update(HEX.parseHex("01"));
+        hash.update(HEX.parseHex("0202"));
+        hash.update(HEX.parseHex("030303"));
         byte[] actual = hash.doFinal();
         assertHexEquals(actual, "fe550c163f7ce3e8f636ca8770333c4ce33a1d8424b4f383036d424929111144");
     }
@@ -138,11 +138,11 @@ public class SequenceFunctionTests {
     @Test
     public void smokeSha256Mac() throws GeneralSecurityException {
         SecretKeySpec key = new SecretKeySpec(
-                decodeHex("27ece6764c77eb17e28a4031878198f37ce95207205fba8671390c8d7449dc91"), "SequenceMac");
-        SequenceMac mac = SequenceMac.getInstance(key, SequenceFunctionSpec.SHA256, decodeHex("00000000"));
-        mac.update(decodeHex("74aee83f30db3fd88d6e31ad41710cb8d9a5dd01aad1d1"));
-        mac.update(decodeHex("f1ed6e58d442903e34571544a8af4f49e86790417916f538746911edbbd34fb9"));
-        mac.update(decodeHex("bd121635c5c732"));
+                HEX.parseHex("27ece6764c77eb17e28a4031878198f37ce95207205fba8671390c8d7449dc91"), "SequenceMac");
+        SequenceMac mac = SequenceMac.getInstance(key, SequenceFunctionSpec.SHA256, HEX.parseHex("00000000"));
+        mac.update(HEX.parseHex("74aee83f30db3fd88d6e31ad41710cb8d9a5dd01aad1d1"));
+        mac.update(HEX.parseHex("f1ed6e58d442903e34571544a8af4f49e86790417916f538746911edbbd34fb9"));
+        mac.update(HEX.parseHex("bd121635c5c732"));
         byte[] actual = mac.doFinal();
         assertHexEquals(actual, "484ad123ab6f1fea03ac9ae765a38bd34128367f408eada7ff8c21b3cd8515c3");
 
@@ -152,9 +152,9 @@ public class SequenceFunctionTests {
     public void arrays() throws Exception {
         SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
         hash.update(new byte[0],
-                decodeHex("01"),
-                decodeHex("0202"),
-                decodeHex("030303"));
+                HEX.parseHex("01"),
+                HEX.parseHex("0202"),
+                HEX.parseHex("030303"));
         byte[] actual = hash.doFinal();
         assertHexEquals(actual, "fe550c163f7ce3e8f636ca8770333c4ce33a1d8424b4f383036d424929111144");
     }
@@ -162,11 +162,11 @@ public class SequenceFunctionTests {
     @Test
     public void byteBufferArrayTests() throws Exception {
         ByteBuffer i0 = ByteBuffer.allocate(0);
-        ByteBuffer i1 = ByteBuffer.wrap(decodeHex("01"));
-        ByteBuffer i2 = ByteBuffer.wrap(decodeHex("0202")).asReadOnlyBuffer();
+        ByteBuffer i1 = ByteBuffer.wrap(HEX.parseHex("01"));
+        ByteBuffer i2 = ByteBuffer.wrap(HEX.parseHex("0202")).asReadOnlyBuffer();
         ByteBuffer i3 = ByteBuffer.allocate(10);
         i3.position(2);
-        i3.put(decodeHex("030303"));
+        i3.put(HEX.parseHex("030303"));
         i3.limit(i3.position());
         i3.position(2);
         assertEquals(3, i3.remaining());
@@ -188,15 +188,15 @@ public class SequenceFunctionTests {
     public void byteBufferDirectTests() throws Exception {
         ByteBuffer i0 = ByteBuffer.allocateDirect(0);
         ByteBuffer i1 = ByteBuffer.allocateDirect(1);
-        i1.put(decodeHex("01"));
+        i1.put(HEX.parseHex("01"));
         i1.flip();
         ByteBuffer i2 = ByteBuffer.allocateDirect(2);
-        i2.put(decodeHex("0202"));
+        i2.put(HEX.parseHex("0202"));
         i2.flip();
         i2 = i2.asReadOnlyBuffer();
         ByteBuffer i3 = ByteBuffer.allocateDirect(10);
         i3.position(2);
-        i3.put(decodeHex("030303"));
+        i3.put(HEX.parseHex("030303"));
         i3.limit(i3.position());
         i3.position(2);
         assertEquals(3, i3.remaining());
@@ -217,11 +217,11 @@ public class SequenceFunctionTests {
     @Test
     public void byteBuffers() throws Exception {
         ByteBuffer i0 = ByteBuffer.allocate(0);
-        ByteBuffer i1 = ByteBuffer.wrap(decodeHex("01"));
-        ByteBuffer i2 = ByteBuffer.wrap(decodeHex("0202")).asReadOnlyBuffer();
+        ByteBuffer i1 = ByteBuffer.wrap(HEX.parseHex("01"));
+        ByteBuffer i2 = ByteBuffer.wrap(HEX.parseHex("0202")).asReadOnlyBuffer();
         ByteBuffer i3 = ByteBuffer.allocate(10);
         i3.position(2);
-        i3.put(decodeHex("030303"));
+        i3.put(HEX.parseHex("030303"));
         i3.limit(i3.position());
         i3.position(2);
         assertEquals(3, i3.remaining());
@@ -242,12 +242,12 @@ public class SequenceFunctionTests {
     @Test
     public void mixedIterable() throws Exception {
         byte[] i0 = new byte[0];
-        ByteBuffer i1 = ByteBuffer.wrap(decodeHex("01"));
+        ByteBuffer i1 = ByteBuffer.wrap(HEX.parseHex("01"));
         ByteBuffer i2 = ByteBuffer.allocateDirect(2);
-        i2.put(decodeHex("0202"));
+        i2.put(HEX.parseHex("0202"));
         i2.flip();
         i2 = i2.asReadOnlyBuffer();
-        byte[] i3 = decodeHex("030303");
+        byte[] i3 = HEX.parseHex("030303");
         List<Object> inputs = Arrays.asList(i0, i1, i2, i3);
 
         SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
@@ -259,12 +259,12 @@ public class SequenceFunctionTests {
     @Test
     public void badIterable() throws Exception {
         byte[] i0 = new byte[0];
-        ByteBuffer i1 = ByteBuffer.wrap(decodeHex("01"));
+        ByteBuffer i1 = ByteBuffer.wrap(HEX.parseHex("01"));
         ByteBuffer i2 = ByteBuffer.allocateDirect(2);
-        i2.put(decodeHex("0202"));
+        i2.put(HEX.parseHex("0202"));
         i2.flip();
         i2 = i2.asReadOnlyBuffer();
-        byte[] i3 = decodeHex("030303");
+        byte[] i3 = HEX.parseHex("030303");
         List<Object> inputs = Arrays.asList(i0, i1, i2, "bad_input", i3);
 
         SequenceHash hash = SequenceHash.getInstance(SequenceFunctionSpec.SHA256);
@@ -451,17 +451,6 @@ public class SequenceFunctionTests {
         assertEquals(md.getDigestLength(), hash.getOutputLength());
     }
 
-    public static void assertHexEquals(byte[] actual, byte[] expected) {
-        String actualString = bytesToHex(actual);
-        String expectedString = bytesToHex(expected);
-        assertEquals(expectedString, actualString);
-    }
-
-    public static void assertHexEquals(byte[] actual, String expected) {
-        String actualString = bytesToHex(actual);
-        assertEquals(expected, actualString);
-    }
-
     public static List<Arguments> buildHashKats() throws Exception {
         return buildKats("hash");
     }
@@ -581,19 +570,19 @@ public class SequenceFunctionTests {
         public String outerHeaderHex;
 
         public SecretKeySpec getKey() {
-            return new SecretKeySpec(decodeHex(keyHex), "SequenceMac");
+            return new SecretKeySpec(HEX.parseHex(keyHex), "SequenceMac");
         }
 
         public byte[] getCustomizer() {
-            return decodeHex(customizerHex);
+            return HEX.parseHex(customizerHex);
         }
 
         public byte[] getFinalOutput() {
-            return decodeHex(finalOutputHex);
+            return HEX.parseHex(finalOutputHex);
         }
 
         public List<byte[]> getInputs() {
-            return inputsHex.stream().map(InternalUtils::decodeHex).collect(Collectors.toList());
+            return inputsHex.stream().map(HEX::parseHex).collect(Collectors.toList());
         }
 
         @Override

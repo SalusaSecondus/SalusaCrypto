@@ -34,6 +34,7 @@ implementation 'dev.salusa:crypto:1.+'
 ## Implemented Specifications
 
 - `SequenceHash` and `SequenceMac` from [c2sp.org/sequencehash](https://c2sp.org/sequencehash) are implemented in by [SequenceFunction](lib/src/main/java/dev/salusa/crypto/SequenceFunction.java). This implementation requires that `MessageDigest` is cloneable. (All standard JCA providers, including [ACCP] and [BouncyCastle] meet the requirements.).
+- `XAES-256-GCM` from [c2sp.org/XAES-256-GCM](https://c2sp.org/XAES-256-GCM) is implemented by [X256Gcm](lib/src/main/java/dev/salusa/crypto/X256Gcm.java).
 
 [ACCP]: https://github.com/corretto/amazon-corretto-crypto-provider/
 [BouncyCastle]: https://www.bouncycastle.org/
