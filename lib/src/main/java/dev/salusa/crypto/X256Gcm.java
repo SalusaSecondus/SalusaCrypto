@@ -27,6 +27,7 @@ import javax.crypto.spec.SecretKeySpec;
  * The API for this class is based heavily on Java's {@link Cipher} API.
  * 
  * @see <a href="https://c2sp.org/XAES-256-GCM@v1.0.1">c2sp.org/XAES-256-GCM</a>
+ * @since 1.1.0
  */
 public final class X256Gcm {
     private static final int AES_BLOCK_LENGTH = 16;

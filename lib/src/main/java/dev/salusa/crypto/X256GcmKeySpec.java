@@ -25,6 +25,8 @@ import javax.crypto.spec.SecretKeySpec;
  * 
  * <p>
  * This class is immutable and thread-safe.
+ * 
+ * @since 1.1.0
  */
 public final class X256GcmKeySpec implements SecretKey, KeySpec {
     private static final int AES_BLOCK_LENGTH = 16;
