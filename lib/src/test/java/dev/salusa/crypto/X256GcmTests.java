@@ -19,6 +19,8 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.Provider;
 import java.security.Security;
 import java.security.interfaces.ECPrivateKey;
@@ -39,6 +41,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
 
 public class X256GcmTests {
     private static final String ALG_NAME = "XAES-256-GCM";
@@ -446,5 +450,38 @@ public class X256GcmTests {
         outLen = xgcm.doFinal(actual, 0, actual.length, tmp);
         byte[] decrypted = Arrays.copyOf(tmp, outLen);
         assertHexEquals(decrypted, plaintext);
+    }
+
+    @Test
+    public void keyEquality() throws Exception {
+        byte[] rawKey = "Yellow SubmarineYellow-Submarine".getBytes(StandardCharsets.UTF_8);
+        X256GcmKeySpec k1 = X256GcmKeySpec.getInstance(rawKey, "BC");
+        X256GcmKeySpec k2 = X256GcmKeySpec.getInstance(rawKey, "SunJCE");
+        X256GcmKeySpec k3 = X256GcmKeySpec.getInstance(new SecretKeySpec(rawKey, "AES"), "BC");
+        X256GcmKeySpec k4 = X256GcmKeySpec.getInstance(new SecretKeySpec(rawKey, "AES"), "SunJCE");
+        X256GcmKeySpec[] keys = {k1, k2, k3, k4};
+        for (X256GcmKeySpec a : keys) {
+            for (X256GcmKeySpec b : keys) {
+                assertEquals(a, b);
+                assertEquals(a.hashCode(), b.hashCode());
+            }
+        }
+    }
+
+    @Test
+    public void fakeProviderFails() throws Exception {
+        assertThrows(NoSuchProviderException.class, () -> X256GcmKeySpec.getInstance(new byte[32], "FakeProvider"));
+        assertThrows(NoSuchProviderException.class, () -> X256Gcm.getInstance("FakeProvider"));
+    }
+
+    @Test
+    public void nonAesProviderFails() throws Exception {
+        assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], "SunRsaSign"));
+        assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance("SunRsaSign"));
+        // ACCP supports AES but not AES-ECB
+        if (AmazonCorrettoCryptoProvider.INSTANCE.getLoadingError() == null) {
+            assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], AmazonCorrettoCryptoProvider.INSTANCE));
+            assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance(AmazonCorrettoCryptoProvider.INSTANCE));
+        }
     }
 }

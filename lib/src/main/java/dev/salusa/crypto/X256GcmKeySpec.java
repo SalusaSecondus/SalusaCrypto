@@ -159,10 +159,10 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
         try {
             l = aesCipher.doFinal(ZERO_BLOCK);
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
-            throw new IllegalArgumentException("Cipher did not properly implement AES-ECB", e);
+            throw new UnexpectedException("Cipher did not properly implement AES-ECB", e);
         }
         if (l.length != AES_BLOCK_LENGTH) {
-            throw new IllegalArgumentException("Cipher returned output of wrong length: " + l.length);
+            throw new UnexpectedException("Cipher returned output of wrong length: " + l.length);
         }
         final byte topBit = InternalUtils.leftShift(l, 1);
 
