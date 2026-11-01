@@ -165,10 +165,8 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
             throw new UnexpectedException("Cipher returned output of wrong length: " + l.length);
         }
         final byte topBit = InternalUtils.leftShift(l, 1);
+        l[l.length - 1] ^= InternalUtils.select(topBit, 0b10000111, 0);
 
-        if (topBit != 0) {
-            l[l.length - 1] ^= 0b10000111;
-        }
         return new X256GcmKeySpec(k, l);
     }
 

@@ -34,7 +34,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -83,14 +82,12 @@ public class SequenceFunctionTests {
                 args(cloneSpec(SequenceFunctionSpec.SHA3_384, "BC")),
                 args(cloneSpec(SequenceFunctionSpec.SHA3_512, "BC"))
             ));
-        if (AmazonCorrettoCryptoProvider.INSTANCE.getLoadingError() == null) {
-            result.addAll(Arrays.asList(
-                args(cloneSpec(SequenceFunctionSpec.SHA1, AmazonCorrettoCryptoProvider.INSTANCE)),
-                args(cloneSpec(SequenceFunctionSpec.SHA256, AmazonCorrettoCryptoProvider.INSTANCE)),
-                args(cloneSpec(SequenceFunctionSpec.SHA384, AmazonCorrettoCryptoProvider.INSTANCE)),
-                args(cloneSpec(SequenceFunctionSpec.SHA512, AmazonCorrettoCryptoProvider.INSTANCE))
-            ));
-        }
+        TestUtils.ACCP.ifPresent((accp) -> {
+            result.add(args(cloneSpec(SequenceFunctionSpec.SHA1, accp)));
+            result.add(args(cloneSpec(SequenceFunctionSpec.SHA256, accp)));
+            result.add(args(cloneSpec(SequenceFunctionSpec.SHA384, accp)));
+            result.add(args(cloneSpec(SequenceFunctionSpec.SHA512, accp)));
+        });
         return result;
     }
 

@@ -51,6 +51,12 @@ public class InternalUtilTests {
         assertThrows(IllegalArgumentException.class, () -> InternalUtils.leftShift(new byte[] {0x01}, 9));
     }
 
+    @Test
+    public void selectSmoke() {
+        assertEquals(Integer.MIN_VALUE, InternalUtils.select(1, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        assertEquals(Integer.MAX_VALUE, InternalUtils.select(0, Integer.MIN_VALUE, Integer.MAX_VALUE));
+    }
+
     @Test 
     public void cloneArrayNullYieldsEmpty() {
         assertSame(InternalUtils.EMPTY_ARRAY, InternalUtils.cloneArray(null));

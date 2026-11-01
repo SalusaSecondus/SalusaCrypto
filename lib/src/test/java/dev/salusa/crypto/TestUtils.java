@@ -3,10 +3,15 @@ package dev.salusa.crypto;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HexFormat;
+import java.util.Optional;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
+
 class TestUtils {
+    static final Optional<AmazonCorrettoCryptoProvider> ACCP =
+        Optional.of(AmazonCorrettoCryptoProvider.INSTANCE).filter((p) -> p.getLoadingError() == null);
     static final BouncyCastleProvider BC = new BouncyCastleProvider();
     static final HexFormat HEX = HexFormat.of();
 

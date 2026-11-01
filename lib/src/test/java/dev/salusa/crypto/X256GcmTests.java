@@ -42,8 +42,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
-
 public class X256GcmTests {
     private static final String ALG_NAME = "XAES-256-GCM";
     static {
@@ -479,9 +477,9 @@ public class X256GcmTests {
         assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], "SunRsaSign"));
         assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance("SunRsaSign"));
         // ACCP supports AES but not AES-ECB
-        if (AmazonCorrettoCryptoProvider.INSTANCE.getLoadingError() == null) {
-            assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], AmazonCorrettoCryptoProvider.INSTANCE));
-            assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance(AmazonCorrettoCryptoProvider.INSTANCE));
-        }
+        TestUtils.ACCP.ifPresent((accp) -> {
+            assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], accp));
+            assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance(accp));
+        });
     }
 }
