@@ -1,14 +1,26 @@
 package dev.salusa.crypto;
 
+import java.security.SecureRandom;
+
 /**
  * DO NOT USE
  * 
- * <p>This class and all methods on it are intended for internal use by the SalusaCrypto package.
- * No promises are made about these APIs or functions and they may change or be deleted even on patch version changes.
+ * <p>
+ * This class and all methods on it are intended for internal use by the
+ * SalusaCrypto package.
+ * No promises are made about these APIs or functions and they may change or be
+ * deleted even on patch version changes.
  * Do not use this under any circumstances.
  */
 final class InternalUtils {
     static final byte[] EMPTY_ARRAY = new byte[0];
+    static final ThreadLocal<SecureRandom> RNG = ThreadLocal.withInitial(SecureRandom::new);
+
+    static byte[] randomBytes(int length) {
+        byte[] result = new byte[length];
+        RNG.get().nextBytes(result);
+        return result;
+    }
 
     static byte[] cloneArray(byte[] arr) {
         if (arr == null || arr.length == 0) {
@@ -17,27 +29,36 @@ final class InternalUtils {
         return arr.clone();
     }
 
-    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
-
-    static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+    /** Constant time */
+    static byte leftShift(byte[] arr, int shift) {
+        if (shift > 8 || shift < 0) {
+            throw new IllegalArgumentException();
         }
-        return new String(hexChars);
+        if (arr.length == 0) {
+            return 0;
+        }
+        final byte mask = (byte) ((1 << shift) - 1);
+        final byte result = (byte) ((arr[0] >>> (8 - shift)) & mask);
+
+        for (int idx = 0; idx < arr.length; idx++) {
+            byte carry = 0;
+            if (idx < arr.length - 1) {
+                carry = (byte) ((arr[idx + 1] >> (8 - shift)) & mask);
+            }
+            arr[idx] <<= shift;
+            arr[idx] |= carry;
+        }
+        return result;
     }
 
+    /** Constant-time. Requires that selector be 1 or 0. */
+    static int select(int selector, int a, int b) {
+        final int mask = (1 - selector) - 1;
+        // Mask == -1 (all bits 1) iff selector != 0
+        // Mask == 0 (all bits 0) iff selector == 0
 
-  static byte[] decodeHex(String hex) {
-    if (hex.length() % 2 != 0) {
-      throw new IllegalArgumentException("Input length must be even");
+        final int combined = a ^ b;
+
+        return b ^ (combined & mask);
     }
-    byte[] result = new byte[hex.length() / 2];
-    for (int x = 0; x < hex.length() / 2; x++) {
-      result[x] = (byte) Integer.parseInt(hex.substring(2 * x, 2 * x + 2), 16);
-    }
-    return result;
-  }
 }

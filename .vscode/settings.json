@@ -3,7 +3,8 @@
         "LSBF",
         "MSBF",
         "SEQHSH",
-        "sequencehash"
+        "sequencehash",
+        "xgcm"
     ],
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.compile.nullAnalysis.mode": "automatic",
