@@ -1,3 +1,7 @@
+# 1.1.0
+
+- Add support for `XAES-256-GCM` with `XAes256Gcm`
+
 # 1.0.0 (First major release)
 
 - Supports SequenceHash and SequenceMac

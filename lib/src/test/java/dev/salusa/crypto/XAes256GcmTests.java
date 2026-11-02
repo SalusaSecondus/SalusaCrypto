@@ -42,7 +42,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class X256GcmTests {
+public class XAes256GcmTests {
     private static final String ALG_NAME = "XAES-256-GCM";
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -51,10 +51,10 @@ public class X256GcmTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("providers")
     public void vector1(String name, Object specProvider, Object cipherProvider) throws Exception {
-        X256GcmKeySpec key = buildSpec(
+        XAes256GcmKeySpec key = buildSpec(
             HEX.parseHex("0101010101010101010101010101010101010101010101010101010101010101"),
             specProvider);
-        X256Gcm xgcm = getInstance(cipherProvider);
+        XAes256Gcm xgcm = getInstance(cipherProvider);
         IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
         byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
         xgcm.init(Cipher.ENCRYPT_MODE, key, iv);
@@ -71,13 +71,13 @@ public class X256GcmTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("providers")
     public void vector2(String name, Object specProvider, Object cipherProvider) throws Exception {
-        X256GcmKeySpec key = buildSpec(
+        XAes256GcmKeySpec key = buildSpec(
             HEX.parseHex("0303030303030303030303030303030303030303030303030303030303030303"),
             specProvider);
         assertEquals(ALG_NAME, key.getAlgorithm());
         assertEquals("RAW", key.getFormat());
         assertHexEquals(key.getEncoded(), "0303030303030303030303030303030303030303030303030303030303030303");
-        X256Gcm xgcm = getInstance(cipherProvider);
+        XAes256Gcm xgcm = getInstance(cipherProvider);
         if (cipherProvider instanceof Provider p) {
             assertEquals(p, xgcm.getProvider());
         }
@@ -120,8 +120,8 @@ public class X256GcmTests {
             byte[] aad = new byte[aadLength];
             xof.doOutput(aad, 0, aadLength);
 
-            X256GcmKeySpec key = buildSpec(rawKey, specProvider);
-            X256Gcm xGcm = getInstance(cipherProvider);
+            XAes256GcmKeySpec key = buildSpec(rawKey, specProvider);
+            XAes256Gcm xGcm = getInstance(cipherProvider);
 
             IvParameterSpec iv = new IvParameterSpec(rawIv);
             xGcm.init(Cipher.ENCRYPT_MODE, key, iv);
@@ -139,28 +139,28 @@ public class X256GcmTests {
         assertHexEquals(output, "e6b9edf2df6cec60c8cbd864e2211b597fb69a529160cd040d56c0c210081939");
     }
 
-    private static X256GcmKeySpec buildSpec(byte[] rawKey, Object prov) throws GeneralSecurityException {
+    private static XAes256GcmKeySpec buildSpec(byte[] rawKey, Object prov) throws GeneralSecurityException {
         if (prov == null) {
-            return X256GcmKeySpec.getInstance(rawKey);
+            return XAes256GcmKeySpec.getInstance(rawKey);
         }
         if (prov instanceof String s) {
-            return X256GcmKeySpec.getInstance(rawKey, s);
+            return XAes256GcmKeySpec.getInstance(rawKey, s);
         }
         if (prov instanceof Provider p) {
-            return X256GcmKeySpec.getInstance(rawKey, p);
+            return XAes256GcmKeySpec.getInstance(rawKey, p);
         }
         throw new IllegalArgumentException();
     }
 
-    private static X256Gcm getInstance(Object prov) throws GeneralSecurityException {
+    private static XAes256Gcm getInstance(Object prov) throws GeneralSecurityException {
         if (prov == null) {
-            return X256Gcm.getInstance();
+            return XAes256Gcm.getInstance();
         }
         if (prov instanceof String s) {
-            return X256Gcm.getInstance(s);
+            return XAes256Gcm.getInstance(s);
         }
         if (prov instanceof Provider p) {
-            return X256Gcm.getInstance(p);
+            return XAes256Gcm.getInstance(p);
         }
         throw new IllegalArgumentException();
     }
@@ -197,18 +197,18 @@ public class X256GcmTests {
     
     @Test
     public void testKeyLengthChecks() {
-        assertThrows(InvalidKeyException.class, () -> X256GcmKeySpec.getInstance(new byte[16]));
-        assertThrows(InvalidKeyException.class, () -> X256GcmKeySpec.getInstance(new byte[16], "BC"));
-        assertThrows(InvalidKeyException.class, () -> X256GcmKeySpec.getInstance(new byte[16], BC));
+        assertThrows(InvalidKeyException.class, () -> XAes256GcmKeySpec.getInstance(new byte[16]));
+        assertThrows(InvalidKeyException.class, () -> XAes256GcmKeySpec.getInstance(new byte[16], "BC"));
+        assertThrows(InvalidKeyException.class, () -> XAes256GcmKeySpec.getInstance(new byte[16], BC));
     }
 
     @Test
     public void offsetVector1() throws Exception {
-        X256GcmKeySpec key = X256GcmKeySpec.getInstance(
+        XAes256GcmKeySpec key = XAes256GcmKeySpec.getInstance(
             HEX.parseHex("ff0101010101010101010101010101010101010101010101010101010101010101ff"),
             1);
         assertHexEquals(key.getEncoded(), "0101010101010101010101010101010101010101010101010101010101010101");
-        X256Gcm xgcm = X256Gcm.getInstance();
+        XAes256Gcm xgcm = XAes256Gcm.getInstance();
         IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
         byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
         xgcm.init(Cipher.ENCRYPT_MODE, key, iv);
@@ -225,9 +225,9 @@ public class X256GcmTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("providers")
     public void symmetricWrap(final String name, Object specProvider, Object cipherProvider) throws Exception {
-        final X256GcmKeySpec key = randomKey(specProvider);
+        final XAes256GcmKeySpec key = randomKey(specProvider);
         final SecretKey aesKey = new SecretKeySpec(InternalUtils.randomBytes(32), "AES");
-        final X256Gcm xgcm = getInstance(cipherProvider);
+        final XAes256Gcm xgcm = getInstance(cipherProvider);
         xgcm.init(Cipher.WRAP_MODE, key);
         final byte[] iv = xgcm.getIV();
         final byte[] wrapped = xgcm.wrap(aesKey);
@@ -242,8 +242,8 @@ public class X256GcmTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("providers")
     public void asymmetricWrap(final String name, Object specProvider, Object cipherProvider) throws Exception {
-        final X256GcmKeySpec key = randomKey(specProvider);
-        final X256Gcm xgcm = getInstance(cipherProvider);
+        final XAes256GcmKeySpec key = randomKey(specProvider);
+        final XAes256Gcm xgcm = getInstance(cipherProvider);
 
         final KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
         kpg.initialize(new ECGenParameterSpec("secp256r1"));
@@ -270,7 +270,7 @@ public class X256GcmTests {
         assertEquals(unwrapped, kp.getPrivate());
     }
 
-    private static X256GcmKeySpec randomKey(Object provider) throws GeneralSecurityException {
+    private static XAes256GcmKeySpec randomKey(Object provider) throws GeneralSecurityException {
         return buildSpec(InternalUtils.randomBytes(32), provider);
     }
 
@@ -298,9 +298,9 @@ public class X256GcmTests {
     @ParameterizedTest(name = "UseBuffer: {0}, UseDirect: {1}, ReadOnly: {2}, Offset: {3}")
     @MethodSource("inputVariantParams")
     public void inputVariants(boolean useBuffer, boolean useDirect, boolean readOnly, boolean offset) throws Exception {
-        X256GcmKeySpec key = X256GcmKeySpec.getInstance(
+        XAes256GcmKeySpec key = XAes256GcmKeySpec.getInstance(
             HEX.parseHex("0303030303030303030303030303030303030303030303030303030303030303"));
-        X256Gcm xgcm = X256Gcm.getInstance();
+        XAes256Gcm xgcm = XAes256Gcm.getInstance();
         IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
         byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
         byte[] aad = "c2sp.org/XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
@@ -377,8 +377,8 @@ public class X256GcmTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("providers")
     public void randomIvIsRandom(final String name, Object specProvider, Object cipherProvider) throws Exception {
-        final X256GcmKeySpec key = randomKey(specProvider);
-        final X256Gcm xgcm = getInstance(cipherProvider);
+        final XAes256GcmKeySpec key = randomKey(specProvider);
+        final XAes256Gcm xgcm = getInstance(cipherProvider);
 
         xgcm.init(Cipher.ENCRYPT_MODE, key);
         final byte[] iv1 = xgcm.getIV();
@@ -392,23 +392,23 @@ public class X256GcmTests {
 
     @Test
     public void toStringWorks() {
-        String result = X256Gcm.getInstance().toString();
+        String result = XAes256Gcm.getInstance().toString();
         assertNotNull(result);
         assertNotEquals("", result);
     }
 
     @Test
     public void badIv() throws Exception {
-        final X256GcmKeySpec key = randomKey(null);
-        final X256Gcm xgcm = X256Gcm.getInstance();
+        final XAes256GcmKeySpec key = randomKey(null);
+        final XAes256Gcm xgcm = XAes256Gcm.getInstance();
         final IvParameterSpec badIv = new IvParameterSpec(new byte[16]);
         assertThrows(InvalidAlgorithmParameterException.class, () -> xgcm.init(Cipher.ENCRYPT_MODE, key, badIv));
     }
 
     @Test 
     public void randomIvNotDecrypt() throws Exception {
-        final X256GcmKeySpec key = randomKey(null);
-        final X256Gcm xgcm = X256Gcm.getInstance();
+        final XAes256GcmKeySpec key = randomKey(null);
+        final XAes256Gcm xgcm = XAes256Gcm.getInstance();
         assertThrows(IllegalArgumentException.class, () -> xgcm.init(Cipher.DECRYPT_MODE, key));
         assertThrows(IllegalArgumentException.class, () -> xgcm.init(Cipher.UNWRAP_MODE, key));
     }
@@ -416,10 +416,10 @@ public class X256GcmTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("providers")
     public void missedCases(String name, Object specProvider, Object cipherProvider) throws Exception {
-        X256GcmKeySpec key = buildSpec(
+        XAes256GcmKeySpec key = buildSpec(
             HEX.parseHex("0101010101010101010101010101010101010101010101010101010101010101"),
             specProvider);
-        X256Gcm xgcm = getInstance(cipherProvider);
+        XAes256Gcm xgcm = getInstance(cipherProvider);
         IvParameterSpec iv = new IvParameterSpec("ABCDEFGHIJKLMNOPQRSTUVWX".getBytes(StandardCharsets.UTF_8));
         byte[] plaintext = "XAES-256-GCM".getBytes(StandardCharsets.UTF_8);
         xgcm.init(Cipher.ENCRYPT_MODE, key, iv);
@@ -453,13 +453,13 @@ public class X256GcmTests {
     @Test
     public void keyEquality() throws Exception {
         byte[] rawKey = "Yellow SubmarineYellow-Submarine".getBytes(StandardCharsets.UTF_8);
-        X256GcmKeySpec k1 = X256GcmKeySpec.getInstance(rawKey, "BC");
-        X256GcmKeySpec k2 = X256GcmKeySpec.getInstance(rawKey, "SunJCE");
-        X256GcmKeySpec k3 = X256GcmKeySpec.getInstance(new SecretKeySpec(rawKey, "AES"), "BC");
-        X256GcmKeySpec k4 = X256GcmKeySpec.getInstance(new SecretKeySpec(rawKey, "AES"), "SunJCE");
-        X256GcmKeySpec[] keys = {k1, k2, k3, k4};
-        for (X256GcmKeySpec a : keys) {
-            for (X256GcmKeySpec b : keys) {
+        XAes256GcmKeySpec k1 = XAes256GcmKeySpec.getInstance(rawKey, "BC");
+        XAes256GcmKeySpec k2 = XAes256GcmKeySpec.getInstance(rawKey, "SunJCE");
+        XAes256GcmKeySpec k3 = XAes256GcmKeySpec.getInstance(new SecretKeySpec(rawKey, "AES"), "BC");
+        XAes256GcmKeySpec k4 = XAes256GcmKeySpec.getInstance(new SecretKeySpec(rawKey, "AES"), "SunJCE");
+        XAes256GcmKeySpec[] keys = {k1, k2, k3, k4};
+        for (XAes256GcmKeySpec a : keys) {
+            for (XAes256GcmKeySpec b : keys) {
                 assertEquals(a, b);
                 assertEquals(a.hashCode(), b.hashCode());
             }
@@ -468,18 +468,18 @@ public class X256GcmTests {
 
     @Test
     public void fakeProviderFails() throws Exception {
-        assertThrows(NoSuchProviderException.class, () -> X256GcmKeySpec.getInstance(new byte[32], "FakeProvider"));
-        assertThrows(NoSuchProviderException.class, () -> X256Gcm.getInstance("FakeProvider"));
+        assertThrows(NoSuchProviderException.class, () -> XAes256GcmKeySpec.getInstance(new byte[32], "FakeProvider"));
+        assertThrows(NoSuchProviderException.class, () -> XAes256Gcm.getInstance("FakeProvider"));
     }
 
     @Test
     public void nonAesProviderFails() throws Exception {
-        assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], "SunRsaSign"));
-        assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance("SunRsaSign"));
+        assertThrows(NoSuchAlgorithmException.class, () -> XAes256GcmKeySpec.getInstance(new byte[32], "SunRsaSign"));
+        assertThrows(NoSuchAlgorithmException.class, () -> XAes256Gcm.getInstance("SunRsaSign"));
         // ACCP supports AES but not AES-ECB
         TestUtils.ACCP.ifPresent((accp) -> {
-            assertThrows(NoSuchAlgorithmException.class, () -> X256GcmKeySpec.getInstance(new byte[32], accp));
-            assertThrows(NoSuchAlgorithmException.class, () -> X256Gcm.getInstance(accp));
+            assertThrows(NoSuchAlgorithmException.class, () -> XAes256GcmKeySpec.getInstance(new byte[32], accp));
+            assertThrows(NoSuchAlgorithmException.class, () -> XAes256Gcm.getInstance(accp));
         });
     }
 }

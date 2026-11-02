@@ -15,7 +15,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * A {@link SecretKey} for use with {@link X256Gcm} in a way similar to a
+ * A {@link SecretKey} for use with {@link XAes256Gcm} in a way similar to a
  * {@link SecretKeySpec}.
  * 
  * <p>
@@ -28,13 +28,13 @@ import javax.crypto.spec.SecretKeySpec;
  * 
  * @since 1.1.0
  */
-public final class X256GcmKeySpec implements SecretKey, KeySpec {
+public final class XAes256GcmKeySpec implements SecretKey, KeySpec {
     private static final int AES_BLOCK_LENGTH = 16;
     private static final byte[] ZERO_BLOCK = new byte[AES_BLOCK_LENGTH];
     private final byte[] k1;
     private final SecretKey k;
 
-    private X256GcmKeySpec(SecretKey k, byte[] k1) {
+    private XAes256GcmKeySpec(SecretKey k, byte[] k1) {
         this.k = k;
         this.k1 = k1;
     }
@@ -46,7 +46,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * <p>
      * The default Java provider for "AES/ECB/NoPadding" is used for key derivation.
      */
-    public static X256GcmKeySpec getInstance(final byte[] k, int offset)
+    public static XAes256GcmKeySpec getInstance(final byte[] k, int offset)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         return getInstance(new SecretKeySpec(k, offset, 32, "AES"));
     }
@@ -57,7 +57,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @param providerName the name of the provider used for key derivation
      */
-    public static X256GcmKeySpec getInstance(final byte[] k, int offset, String providerName)
+    public static XAes256GcmKeySpec getInstance(final byte[] k, int offset, String providerName)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
         return getInstance(new SecretKeySpec(k, offset, 32, "AES"), providerName);
     }
@@ -68,7 +68,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @param provider the provider used for key derivation
      */
-    public static X256GcmKeySpec getInstance(final byte[] k, int offset, Provider provider)
+    public static XAes256GcmKeySpec getInstance(final byte[] k, int offset, Provider provider)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         return getInstance(new SecretKeySpec(k, offset, 32, "AES"), provider);
     }
@@ -81,7 +81,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @throws InvalidKeyException if {@code k} is not exactly 32 bytes long.
      */
-    public static X256GcmKeySpec getInstance(final byte[] k)
+    public static XAes256GcmKeySpec getInstance(final byte[] k)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         if (k.length != 32) {
             throw new InvalidKeyException("Key must be 32 bytes long.");
@@ -96,7 +96,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @throws InvalidKeyException if {@code k} is not exactly 32 bytes long.
      */
-    public static X256GcmKeySpec getInstance(final byte[] k, String providerName)
+    public static XAes256GcmKeySpec getInstance(final byte[] k, String providerName)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
         if (k.length != 32) {
             throw new InvalidKeyException("Key must be 32 bytes long.");
@@ -111,7 +111,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @throws InvalidKeyException if {@code k} is not exactly 32 bytes long.
      */
-    public static X256GcmKeySpec getInstance(final byte[] k, Provider provider)
+    public static XAes256GcmKeySpec getInstance(final byte[] k, Provider provider)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         if (k.length != 32) {
             throw new InvalidKeyException("Key must be 32 bytes long.");
@@ -125,7 +125,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * <p>
      * The default Java provider for "AES/ECB/NoPadding" is used for key derivation.
      */
-    public static X256GcmKeySpec getInstance(final SecretKey k)
+    public static XAes256GcmKeySpec getInstance(final SecretKey k)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         final Cipher c = Cipher.getInstance("AES/ECB/NoPadding");
         return getInstance(k, c);
@@ -136,7 +136,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @param providerName the name of the provider used for key derivation
      */
-    public static X256GcmKeySpec getInstance(final SecretKey k, String providerName)
+    public static XAes256GcmKeySpec getInstance(final SecretKey k, String providerName)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
         final Cipher c = Cipher.getInstance("AES/ECB/NoPadding", providerName);
         return getInstance(k, c);
@@ -147,13 +147,13 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
      * 
      * @param provider the provider used for key derivation
      */
-    public static X256GcmKeySpec getInstance(final SecretKey k, Provider provider)
+    public static XAes256GcmKeySpec getInstance(final SecretKey k, Provider provider)
             throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException {
         final Cipher c = Cipher.getInstance("AES/ECB/NoPadding", provider);
         return getInstance(k, c);
     }
 
-    private static X256GcmKeySpec getInstance(final SecretKey k, final Cipher aesCipher) throws InvalidKeyException {
+    private static XAes256GcmKeySpec getInstance(final SecretKey k, final Cipher aesCipher) throws InvalidKeyException {
         aesCipher.init(Cipher.ENCRYPT_MODE, k);
         byte[] l;
         try {
@@ -167,7 +167,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
         final byte topBit = InternalUtils.leftShift(l, 1);
         l[l.length - 1] ^= InternalUtils.select(topBit, 0b10000111, 0);
 
-        return new X256GcmKeySpec(k, l);
+        return new XAes256GcmKeySpec(k, l);
     }
 
     /**
@@ -209,7 +209,7 @@ public final class X256GcmKeySpec implements SecretKey, KeySpec {
 
     @Override 
     public boolean equals(Object obj) {
-        if (obj instanceof X256GcmKeySpec other) {
+        if (obj instanceof XAes256GcmKeySpec other) {
             return MessageDigest.isEqual(k1, other.k1);
         }
         return false;
