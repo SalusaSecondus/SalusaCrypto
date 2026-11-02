@@ -29,7 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
  * @see <a href="https://c2sp.org/XAES-256-GCM@v1.0.1">c2sp.org/XAES-256-GCM</a>
  * @since 1.1.0
  */
-public final class X256Gcm {
+public final class XAes256Gcm {
     private static final int AES_BLOCK_LENGTH = 16;
     private static final byte[] M_BASE = HexFormat.of()
             .parseHex("0001580000000000000000000000000000025800000000000000000000000000");
@@ -44,11 +44,11 @@ public final class X256Gcm {
      * 
      * @see Cipher#getInstance(String)
      */
-    public static X256Gcm getInstance() {
+    public static XAes256Gcm getInstance() {
         try {
             final Cipher ecb = Cipher.getInstance("AES/ECB/NoPadding");
             final Cipher gcm = Cipher.getInstance("AES/GCM/NoPadding");
-            return new X256Gcm(ecb, gcm);
+            return new XAes256Gcm(ecb, gcm);
         } catch (final NoSuchAlgorithmException | NoSuchPaddingException ex) {
             throw new UnexpectedException(
                     "Both AES/ECB/NoPadding and AES/GCM/NoPadding are expected to always be present.", ex);
@@ -65,11 +65,11 @@ public final class X256Gcm {
      * @param providerName the name of the provider
      * @see Cipher#getInstance(String, String)
      */
-    public static X256Gcm getInstance(String providerName)
+    public static XAes256Gcm getInstance(String providerName)
             throws NoSuchProviderException, NoSuchAlgorithmException, NoSuchPaddingException {
         final Cipher ecb = Cipher.getInstance("AES/ECB/NoPadding", providerName);
         final Cipher gcm = Cipher.getInstance("AES/GCM/NoPadding", providerName);
-        return new X256Gcm(ecb, gcm);
+        return new XAes256Gcm(ecb, gcm);
     }
 
     /**
@@ -82,13 +82,13 @@ public final class X256Gcm {
      * @param provider the provider
      * @see Cipher#getInstance(String, Provider)
      */
-    public static X256Gcm getInstance(Provider provider) throws NoSuchAlgorithmException, NoSuchPaddingException {
+    public static XAes256Gcm getInstance(Provider provider) throws NoSuchAlgorithmException, NoSuchPaddingException {
         final Cipher ecb = Cipher.getInstance("AES/ECB/NoPadding", provider);
         final Cipher gcm = Cipher.getInstance("AES/GCM/NoPadding", provider);
-        return new X256Gcm(ecb, gcm);
+        return new XAes256Gcm(ecb, gcm);
     }
 
-    private X256Gcm(final Cipher ecb, final Cipher gcm) {
+    private XAes256Gcm(final Cipher ecb, final Cipher gcm) {
         this.ecb = ecb;
         this.gcm = gcm;
     }
@@ -108,7 +108,7 @@ public final class X256Gcm {
      *                                  {@link Cipher#ENCRYPT_MODE} or
      *                                  {@link Cipher#WRAP_MODE}
      */
-    public void init(final int cipherMode, final X256GcmKeySpec key) throws InvalidKeyException {
+    public void init(final int cipherMode, final XAes256GcmKeySpec key) throws InvalidKeyException {
         if (cipherMode != Cipher.ENCRYPT_MODE && cipherMode != Cipher.WRAP_MODE) {
             throw new IllegalArgumentException(
                     "IvParameterSpec may only be omitted for Cipher.ENCRYPT_MODE and Cipher.WRAP_MODE");
@@ -129,7 +129,7 @@ public final class X256Gcm {
      * 
      * @see Cipher#init(int, Key, java.security.spec.AlgorithmParameterSpec)
      */
-    public void init(final int cipherMode, final X256GcmKeySpec key, final IvParameterSpec ivSpec)
+    public void init(final int cipherMode, final XAes256GcmKeySpec key, final IvParameterSpec ivSpec)
             throws InvalidAlgorithmParameterException, InvalidKeyException {
         final byte[] rawIv = ivSpec.getIV();
         if (rawIv.length != 24) {
@@ -263,7 +263,7 @@ public final class X256Gcm {
 
     @Override
     public String toString() {
-        return "X256Gcm from " + gcm.getProvider();
+        return "XAes256Gcm from " + gcm.getProvider();
     }
 
     /**
