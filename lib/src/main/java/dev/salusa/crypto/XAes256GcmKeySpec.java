@@ -14,6 +14,8 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import dev.salusa.crypto.hazmat.ConstantTime;
+
 /**
  * A {@link SecretKey} for use with {@link XAes256Gcm} in a way similar to a
  * {@link SecretKeySpec}.
@@ -164,8 +166,8 @@ public final class XAes256GcmKeySpec implements SecretKey, KeySpec {
         if (l.length != AES_BLOCK_LENGTH) {
             throw new UnexpectedException("Cipher returned output of wrong length: " + l.length);
         }
-        final byte topBit = InternalUtils.leftShift(l, 1);
-        l[l.length - 1] ^= InternalUtils.select(topBit, 0b10000111, 0);
+        final byte topBit = ConstantTime.leftShift(l, 1);
+        l[l.length - 1] ^= ConstantTime.select(topBit, 0b10000111, 0);
 
         return new XAes256GcmKeySpec(k, l);
     }
