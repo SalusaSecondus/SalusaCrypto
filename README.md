@@ -5,7 +5,7 @@ Some will be implementing standards. Some are useful optimizations. And others a
 
 Unless otherwise specified, everything in this package requires no dependencies beyond those provided by stock Java and will work with any JCA implementations.
 
-[Javadoc](https://salusasecondus.github.io/SalusaCrypto/dev/salusa/crypto/package-summary.html) is available and is updated to match the most recent release.
+[Javadoc](https://salusasecondus.github.io/SalusaCrypto/index.html) is available and is updated to match the most recent release.
 
 If you want your Java cryptography to be much faster in general, I strongly recommend adopting the [Amazon Corretto Crypto Provider (ACCP)](https://github.com/corretto/amazon-corretto-crypto-provider/), a former project of mine. It really does make everything better.
 
@@ -45,6 +45,7 @@ implementation 'dev.salusa:crypto:1.+'
   Sometimes we need the equivalent of a [Consumer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html) or [Supplier](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html) or similar but the method might throw an Exception (or error). How to do this, especially in a way that is compatible with lambdas? I define some new interfaces to make this easier and will add them as I need them (or if people request).
   - [ThrowingConsumer](lib/src/main/java/dev/salusa/crypto/ThrowingConsumer.java)
   - [ThrowingSupplier](lib/src/main/java/dev/salusa/crypto/ThrowingSupplier.java)
+- (HAZMAT) Constant time functions
 
 ## Disclaimer
 
